@@ -1,0 +1,5 @@
+# A candidate model is promoted to production only if every criterion holds.
+min_auroc: 0.85
+min_sensitivity: 0.90
+# Largest AUROC drop tolerated versus the current production model.
+max_auroc_drop_vs_production: 0.01
