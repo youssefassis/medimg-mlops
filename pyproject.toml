@@ -16,6 +16,7 @@ lint = [
     "ruff==0.16.9",
 ]
 test = [
+    "apache-airflow==3.3.2",
     "pytest>=9,<10",
 ]
 
