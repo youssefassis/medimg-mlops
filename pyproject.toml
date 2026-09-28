@@ -5,6 +5,7 @@ description = "Learning project: Airflow, MLflow and continual learning for medi
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "boto3>=1.43,<2",
     "pyyaml>=6,<7",
 ]
 
