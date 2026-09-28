@@ -6,4 +6,8 @@ __pycache__/
 .ruff_cache/
 .uv-cache/
 logs/
+data/*
+!data/README.md
+models/*
+!models/.gitkeep
 .DS_Store
