@@ -1,0 +1,62 @@
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.12.19
+    hooks:
+      - id: uv-lock
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: no-medical-data-or-weights
+        name: block medical images and model weights
+        language: fail
+        entry: >-
+          Medical images and model weights must not be committed;
+          keep them in data/ or models/ (gitignored).
+        files: '(?i)\.(dcm|dicom|nii|nii\.gz|nrrd|mha|mhd|npy|npz|pt|pth|ckpt|onnx|safetensors|h5)$'
+
+      - id: commit-message-format
+        name: 'commit message is "[TAG] summary" (max 72 chars)'
+        language: pygrep
+        entry: '\A(?!(?=[^\n]{1,72}(?:\n|\Z))\[(?:FEAT|FIX|REFACTOR|CHORE|DOCS|TEST|PERF)\] \S|Merge |Revert |fixup! |squash! )'
+        args: [--multiline]
+        stages: [commit-msg]
+
+      - id: pytest
+        name: pytest
+        language: system
+        entry: uv run pytest -q
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
