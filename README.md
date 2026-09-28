@@ -22,6 +22,24 @@ uv run pre-commit install
 uv run pytest
 ```
 
+## Local stack
+
+Needs Docker with 6 GB of RAM (on macOS: `colima start --cpu 4 --memory 8`).
+
+```bash
+cp .env.example .env    # replace every "change-me"
+docker compose up -d --build
+```
+
+| Service | URL |
+|---|---|
+| Airflow | http://localhost:8080 |
+| MLflow | http://localhost:5001 |
+| RustFS console | http://localhost:9001/rustfs/console/ |
+
+To run the pipeline: upload files to `landing/batch_001/` in RustFS, then trigger the
+`continual_learning` DAG in Airflow.
+
 ## Roadmap
 
 0. Project skeleton, tooling, CI
