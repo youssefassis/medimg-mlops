@@ -1,0 +1,7 @@
+# Used by the promote step. A model gets the production alias only if it passes every rule,
+# using its metrics on test/.
+model_name: pneumonia-classifier
+min_recall: 0.90
+min_specificity: 0.80
+# Recall, specificity and ROC AUC may be at most this much below the production model's.
+max_drop: 0.01
