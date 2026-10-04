@@ -13,30 +13,29 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from mlops.config import TrainingConfig
-from mlops.data.batches import read_batch, split_off_patients
-from mlops.data.chest_xray import LABELS, Sample, list_samples
+from mlops.data.batches import batch_path, read_batch, split_off_patients
+from mlops.data.chest_xray import LABELS, Sample
 from mlops.data.dataset import ChestXrayDataset
 from mlops.data.transforms import IMAGE_SIZE, build_transform
-from mlops.evaluation.metrics import compute_metrics
+from mlops.evaluation.evaluate import evaluate_model, with_prefix
 from mlops.training.model import build_model
 
 logger = logging.getLogger(__name__)
 
 
 def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> str:
-    """Trains on `data/batches/batch_<config.batch>.csv` and returns the MLflow run ID.
+    """Trains on batch number `config.batch` and returns the MLflow run ID.
 
-    Keeps the epoch with the best validation ROC AUC, then scores it on the test set.
+    Keeps the epoch with the best validation ROC AUC. Scoring on test/ is done separately,
+    by `mlops.evaluation.evaluate.evaluate_run`.
     """
     torch.manual_seed(config.seed)
     device = pick_device(config.device)
-    samples = read_batch(data_dir / "batches" / f"batch_{config.batch}.csv")
+    samples = read_batch(batch_path(data_dir, config.batch))
     train_samples, val_samples = split_off_patients(samples, config.val_fraction, config.seed)
-    test_samples = list_samples(data_dir, "test")
 
     train_loader = make_loader(train_samples, data_dir, config, shuffle=True)
     val_loader = make_loader(val_samples, data_dir, config)
-    test_loader = make_loader(test_samples, data_dir, config)
 
     model = build_model(pretrained).to(device)
     weights = class_weights(train_samples)
@@ -56,7 +55,6 @@ def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> st
                 "pretrained": pretrained,
                 "n_train": len(train_samples),
                 "n_val": len(val_samples),
-                "n_test": len(test_samples),
                 **weight_params,
             }
         )
@@ -65,7 +63,8 @@ def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> st
         for epoch in range(1, config.epochs + 1):
             start = time.monotonic()
             train_loss = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
-            val_metrics = evaluate(model, val_loader, device)
+            model.eval()
+            val_metrics = evaluate_model(model, val_loader, device)
             mlflow.log_metrics(
                 {"train_loss": train_loss, **with_prefix("val_", val_metrics)}, step=epoch
             )
@@ -82,10 +81,8 @@ def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> st
                 best_state = copy.deepcopy(model.state_dict())
 
         model.load_state_dict(best_state)
-        test_metrics = evaluate(model, test_loader, device)
         mlflow.log_param("best_epoch", best_epoch)
-        mlflow.log_metrics(with_prefix("test_", test_metrics))
-        logger.info("best epoch %d, test metrics %s", best_epoch, test_metrics)
+        logger.info("best epoch %d, val_roc_auc %.4f", best_epoch, best_auc)
 
         log_model(model.cpu())
         return run.info.run_id
@@ -138,18 +135,6 @@ def train_one_epoch(
     return total_loss / len(loader.dataset)
 
 
-@torch.no_grad()
-def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> dict[str, float]:
-    model.eval()
-    labels: list[int] = []
-    scores: list[float] = []
-    for images, batch_labels in loader:
-        probabilities = torch.softmax(model(images.to(device)), dim=1)
-        scores += probabilities[:, LABELS.index("PNEUMONIA")].tolist()
-        labels += batch_labels.tolist()
-    return compute_metrics(labels, scores)
-
-
 def log_model(model: nn.Module) -> None:
     """Logs the model in MLflow's pt2 format, which is traced from an example input.
 
@@ -157,7 +142,3 @@ def log_model(model: nn.Module) -> None:
     """
     example = torch.zeros(2, 3, IMAGE_SIZE, IMAGE_SIZE)
     mlflow.pytorch.log_model(model.eval(), name="model", input_example=example.numpy())
-
-
-def with_prefix(prefix: str, metrics: dict[str, float]) -> dict[str, float]:
-    return {prefix + name: value for name, value in metrics.items()}

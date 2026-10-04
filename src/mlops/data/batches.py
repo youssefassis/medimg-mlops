@@ -10,6 +10,11 @@ from mlops.data.chest_xray import Sample
 CSV_COLUMNS = ("path", "label", "patient_id")
 
 
+def drop_patients(samples: list[Sample], patient_ids: set[str]) -> list[Sample]:
+    """Removes every image of the given patients, e.g. the ones also in the test set."""
+    return [sample for sample in samples if sample.patient_id not in patient_ids]
+
+
 def split_by_patient(samples: list[Sample], n_batches: int, seed: int) -> list[list[Sample]]:
     """Splits samples into n_batches of similar size, with each patient in one batch only.
 
@@ -75,6 +80,10 @@ def write_batches(batches: list[list[Sample]], out_dir: Path) -> list[Path]:
             writer.writerows((sample.path, sample.label, sample.patient_id) for sample in batch)
         paths.append(path)
     return paths
+
+
+def batch_path(data_dir: Path, number: int) -> Path:
+    return data_dir / "batches" / f"batch_{number}.csv"
 
 
 def read_batch(path: Path) -> list[Sample]:

@@ -1,0 +1,46 @@
+"""Validates a batch, trains on it, then scores the model on test/.
+
+Tasks run in the mlops venv of the Airflow image (see docker/airflow.Dockerfile) and only call
+mlops.pipeline. They pass the MLflow run ID to each other, never data.
+"""
+
+from datetime import timedelta
+
+from airflow.sdk import Param, dag, task
+
+MLOPS_PYTHON = "/opt/mlops/.venv/bin/python"
+
+
+@dag(
+    schedule=None,
+    params={"batch": Param(1, type="integer", minimum=1, maximum=5, description="Batch number")},
+    default_args={"retries": 2, "retry_delay": timedelta(minutes=1)},
+    render_template_as_native_obj=True,  # so "{{ params.batch }}" stays an int
+    tags=["training"],
+)
+def training_pipeline():
+    @task.external_python(python=MLOPS_PYTHON, expect_airflow=False)
+    def validate(batch: int) -> None:
+        from mlops import pipeline
+
+        pipeline.validate(batch)
+
+    @task.external_python(python=MLOPS_PYTHON, expect_airflow=False)
+    def train(batch: int) -> str:
+        from mlops import pipeline
+
+        return pipeline.train(batch)
+
+    @task.external_python(python=MLOPS_PYTHON, expect_airflow=False)
+    def evaluate(run_id: str) -> dict[str, float]:
+        from mlops import pipeline
+
+        return pipeline.evaluate(run_id)
+
+    batch = "{{ params.batch }}"
+    run_id = train(batch)
+    validate(batch) >> run_id
+    evaluate(run_id)
+
+
+training_pipeline()

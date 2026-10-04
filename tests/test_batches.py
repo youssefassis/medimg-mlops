@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from mlops.data.batches import (
+    drop_patients,
     read_batch,
     split_by_patient,
     split_off_patients,
@@ -111,3 +112,10 @@ def test_read_batch_reads_what_write_batches_wrote(tmp_path):
     paths = write_batches(batches, tmp_path)
 
     assert [read_batch(path) for path in paths] == batches
+
+
+def test_drop_patients_removes_all_their_images():
+    kept = drop_patients(SAMPLES, {"NORMAL-p0", "PNEUMONIA-p3"})
+
+    assert len(kept) == len(SAMPLES) - 4
+    assert not {"NORMAL-p0", "PNEUMONIA-p3"} & {sample.patient_id for sample in kept}

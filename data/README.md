@@ -13,5 +13,5 @@ raw/chest_xray/
 ```
 
 `uv run python scripts/make_batches.py` splits `train/` and `val/` into 5 batches in `batches/`,
-to simulate new data arriving over time. A patient is never in two batches. `test/` is kept as is
-for evaluation.
+to simulate new data arriving over time. A patient is never in two batches, and patients that also
+have images in `test/` are left out. `test/` is kept as is for evaluation.
