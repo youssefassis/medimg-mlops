@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from mlops.data.batches import split_by_patient, write_batches
+from mlops.data.batches import split_by_patient, split_off_patients, write_batches
 from mlops.data.chest_xray import Sample
 
 
@@ -76,3 +76,25 @@ def test_write_batches_writes_one_csv_per_batch(tmp_path):
         {"path": str(sample.path), "label": sample.label, "patient_id": sample.patient_id}
         for sample in batches[0]
     ]
+
+
+def test_split_off_patients_holds_out_a_fraction_of_each_class():
+    kept, held_out = split_off_patients(SAMPLES, fraction=0.2, seed=0)
+
+    assert {s.patient_id for s in kept}.isdisjoint({s.patient_id for s in held_out})
+    assert sorted(kept + held_out, key=str) == sorted(SAMPLES, key=str)
+    held_out_labels = [sample.label for sample in held_out]
+    assert held_out_labels.count("NORMAL") == 2 * 2  # 2 of 10 patients, 2 images each
+    assert held_out_labels.count("PNEUMONIA") == 4 * 2  # 4 of 20 patients
+
+
+def test_split_off_patients_keeps_a_patient_on_each_side():
+    kept, held_out = split_off_patients(make_samples("NORMAL", 2), fraction=0.01, seed=0)
+
+    assert len(kept) == len(held_out) == 2
+
+
+@pytest.mark.parametrize("fraction", [0, 1, 1.5])
+def test_split_off_patients_fails_on_bad_fraction(fraction):
+    with pytest.raises(ValueError, match="fraction"):
+        split_off_patients(SAMPLES, fraction=fraction, seed=0)

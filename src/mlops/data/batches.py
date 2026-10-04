@@ -36,6 +36,30 @@ def split_by_patient(samples: list[Sample], n_batches: int, seed: int) -> list[l
     return [sorted(batch, key=lambda sample: sample.path) for batch in batches]
 
 
+def split_off_patients(
+    samples: list[Sample], fraction: float, seed: int
+) -> tuple[list[Sample], list[Sample]]:
+    """Holds out about `fraction` of the patients of each class, e.g. for validation.
+
+    Returns (kept, held_out). Each class keeps at least one patient on each side.
+    """
+    if not 0 < fraction < 1:
+        raise ValueError(f"fraction must be between 0 and 1, got {fraction}")
+
+    kept: list[Sample] = []
+    held_out: list[Sample] = []
+    rng = random.Random(seed)
+    for label, by_patient in sorted(_group_by_label_and_patient(samples).items()):
+        if len(by_patient) < 2:
+            raise ValueError(f"{label} has {len(by_patient)} patient, need at least 2 to split")
+        patient_ids = sorted(by_patient)
+        rng.shuffle(patient_ids)
+        n_held_out = min(max(round(len(patient_ids) * fraction), 1), len(patient_ids) - 1)
+        for i, patient_id in enumerate(patient_ids):
+            (held_out if i < n_held_out else kept).extend(by_patient[patient_id])
+    return kept, held_out
+
+
 def write_batches(batches: list[list[Sample]], out_dir: Path) -> list[Path]:
     """Writes one CSV per batch (batch_1.csv, batch_2.csv, ...) and removes older ones."""
     out_dir.mkdir(parents=True, exist_ok=True)
