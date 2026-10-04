@@ -15,7 +15,10 @@ and MLflow running locally.
    uv sync
    uv run pre-commit install
    ```
-2. Get the dataset: see [data/README.md](data/README.md).
+2. Get the dataset (see [data/README.md](data/README.md)), then split it into batches:
+   ```bash
+   uv run python scripts/make_batches.py
+   ```
 3. Start the stack:
    ```bash
    cp .env.example .env    # fill in the "change-me" values
@@ -26,10 +29,16 @@ and MLflow running locally.
 
 Stop everything with `docker compose down`.
 
+Run the tests with `uv run pytest`.
+
 ## Project structure
 
 ```
+config/    settings for the scripts
 dags/      Airflow DAGs
-data/      the dataset (not in git)
+data/      the dataset and batches (not in git)
 docker/    Dockerfiles and database setup
+scripts/   commands to run by hand
+src/mlops/ the project code
+tests/     tests, run on a tiny fake dataset
 ```

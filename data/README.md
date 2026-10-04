@@ -11,3 +11,7 @@ raw/chest_xray/
   val/    NORMAL    8 · PNEUMONIA    8
   test/   NORMAL  234 · PNEUMONIA  390
 ```
+
+`uv run python scripts/make_batches.py` splits `train/` and `val/` into 5 batches in `batches/`,
+to simulate new data arriving over time. A patient is never in two batches. `test/` is kept as is
+for evaluation.
