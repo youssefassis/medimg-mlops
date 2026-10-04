@@ -1,4 +1,4 @@
-"""Loads the YAML files from config/."""
+"""Loads the YAML files from config/ into dataclasses."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,18 +8,15 @@ import yaml
 
 @dataclass(frozen=True)
 class BatchesConfig:
-    data_dir: Path
+    data_dir: str  # relative to the project root
     n_batches: int
     seed: int
 
 
-def load_batches_config(path: Path) -> BatchesConfig:
-    config = yaml.safe_load(path.read_text())
+def load_config[T](path: Path, config_class: type[T]) -> T:
+    """Fails if a key is missing or unknown."""
+    values = yaml.safe_load(path.read_text())
     try:
-        return BatchesConfig(
-            data_dir=Path(config["data_dir"]),
-            n_batches=int(config["n_batches"]),
-            seed=int(config["seed"]),
-        )
-    except (KeyError, TypeError, ValueError) as error:
-        raise ValueError(f"Invalid config {path}: {error!r}") from error
+        return config_class(**values)
+    except TypeError as error:
+        raise ValueError(f"Invalid config {path}: {error}") from error
