@@ -26,6 +26,11 @@ and MLflow running locally.
    ```
 4. Open Airflow at http://localhost:8080 and MLflow at http://localhost:5001.
    Trigger the `hello` DAG to check that Airflow sees the dataset.
+5. Train a model on batch 1 (a few minutes) and see the run in MLflow:
+   ```bash
+   uv run python scripts/train.py
+   ```
+   Settings are in `config/training.yaml`.
 
 Stop everything with `docker compose down`.
 
