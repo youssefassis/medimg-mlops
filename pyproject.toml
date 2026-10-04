@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Learning MLOps with Airflow and MLflow, running locally."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "pyyaml>=6.0.3,<7",
+]
 
 [dependency-groups]
 dev = [
