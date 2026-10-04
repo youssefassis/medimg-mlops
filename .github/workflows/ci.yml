@@ -33,3 +33,17 @@ jobs:
         with:
           enable-cache: true
       - run: uv run pytest
+
+  dags:
+    # Airflow pins many packages of its own, so it stays out of the project environment.
+    # The DAG tests install it on their own.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+      - run: >-
+          uv run --isolated --no-project --python 3.12
+          --with apache-airflow==3.3.2 --with pytest==9.1.1
+          pytest tests/dags
