@@ -25,8 +25,11 @@ and MLflow running locally.
    docker compose up -d --build
    ```
 4. Open Airflow at http://localhost:8080 and MLflow at http://localhost:5001.
-   Trigger the `hello` DAG to check that Airflow sees the dataset.
-5. Train a model on batch 1 (a few minutes) and see the run in MLflow:
+5. Train a model: in Airflow, trigger `training_pipeline` and pick a batch (1–5). It validates
+   the batch, trains on it, scores the model on `test/`, and logs the run to MLflow.
+   On CPU this takes about 20 minutes.
+
+   To run the same steps outside Airflow (faster on a Mac GPU):
    ```bash
    uv run python scripts/train.py
    ```
@@ -34,12 +37,15 @@ and MLflow running locally.
 
 Stop everything with `docker compose down`.
 
-Run the tests with `uv run pytest`.
+Run the tests with `uv run pytest`. The DAG tests need Airflow and run on their own:
+```bash
+uv run --isolated --no-project --with apache-airflow==3.3.2 --with pytest==9.1.1 pytest tests/dags
+```
 
 ## Project structure
 
 ```
-config/    settings for the scripts
+config/    settings for training and batches
 dags/      Airflow DAGs
 data/      the dataset and batches (not in git)
 docker/    Dockerfiles and database setup
