@@ -17,6 +17,7 @@ def main() -> None:
     pipeline.validate(batch)
     run_id = pipeline.train(batch)
     pipeline.evaluate(run_id)
+    pipeline.promote(run_id)
 
 
 if __name__ == "__main__":

@@ -25,12 +25,16 @@ def test_dags_load_without_errors(dag_bag):
     assert dag_bag.import_errors == {}
 
 
-def test_training_pipeline_runs_validate_then_train_then_evaluate(dag_bag):
+def test_training_pipeline_task_order(dag_bag):
     dag = dag_bag.dags["training_pipeline"]
 
-    assert dag.get_task("validate").downstream_task_ids == {"train"}
-    assert dag.get_task("train").downstream_task_ids == {"evaluate"}
-    assert dag.get_task("evaluate").downstream_task_ids == set()
+    upstream = {task.task_id: task.upstream_task_ids for task in dag.tasks}
+    assert upstream == {
+        "validate": set(),
+        "train": {"validate"},
+        "evaluate": {"train"},
+        "promote": {"train", "evaluate"},  # gets the run ID from train, runs after evaluate
+    }
 
 
 def test_training_pipeline_retries_its_tasks(dag_bag):
