@@ -77,6 +77,14 @@ def write_batches(batches: list[list[Sample]], out_dir: Path) -> list[Path]:
     return paths
 
 
+def read_batch(path: Path) -> list[Sample]:
+    with path.open(newline="") as file:
+        return [
+            Sample(Path(row["path"]), row["label"], row["patient_id"])
+            for row in csv.DictReader(file)
+        ]
+
+
 def _group_by_label_and_patient(samples: list[Sample]) -> dict[str, dict[str, list[Sample]]]:
     by_label: dict[str, dict[str, list[Sample]]] = defaultdict(lambda: defaultdict(list))
     patient_labels: dict[str, str] = {}

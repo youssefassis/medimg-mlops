@@ -3,7 +3,12 @@ from pathlib import Path
 
 import pytest
 
-from mlops.data.batches import split_by_patient, split_off_patients, write_batches
+from mlops.data.batches import (
+    read_batch,
+    split_by_patient,
+    split_off_patients,
+    write_batches,
+)
 from mlops.data.chest_xray import Sample
 
 
@@ -98,3 +103,11 @@ def test_split_off_patients_keeps_a_patient_on_each_side():
 def test_split_off_patients_fails_on_bad_fraction(fraction):
     with pytest.raises(ValueError, match="fraction"):
         split_off_patients(SAMPLES, fraction=fraction, seed=0)
+
+
+def test_read_batch_reads_what_write_batches_wrote(tmp_path):
+    batches = split_by_patient(SAMPLES, n_batches=2, seed=0)
+
+    paths = write_batches(batches, tmp_path)
+
+    assert [read_batch(path) for path in paths] == batches
