@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from mlops.config import BatchesConfig, TrainingConfig, load_config
+from mlops.config import BatchesConfig, PromotionConfig, TrainingConfig, load_config
 
 CONFIG_DIR = Path(__file__).parents[1] / "config"
 
@@ -31,7 +31,11 @@ def test_load_config_fails_on_missing_or_unknown_key(tmp_path, content, error):
 
 @pytest.mark.parametrize(
     ("file_name", "config_class"),
-    [("batches.yaml", BatchesConfig), ("training.yaml", TrainingConfig)],
+    [
+        ("batches.yaml", BatchesConfig),
+        ("training.yaml", TrainingConfig),
+        ("promotion.yaml", PromotionConfig),
+    ],
 )
 def test_project_configs_load(file_name, config_class):
     load_config(CONFIG_DIR / file_name, config_class)

@@ -26,6 +26,14 @@ class TrainingConfig:
     experiment: str
 
 
+@dataclass(frozen=True)
+class PromotionConfig:
+    model_name: str
+    min_recall: float
+    min_specificity: float
+    max_drop: float
+
+
 def load_config[T](path: Path, config_class: type[T]) -> T:
     """Fails if a key is missing or unknown."""
     values = yaml.safe_load(path.read_text())

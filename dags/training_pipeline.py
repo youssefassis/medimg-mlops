@@ -1,4 +1,4 @@
-"""Validates a batch, trains on it, then scores the model on test/.
+"""Validates a batch, trains on it, scores the model on test/, then decides whether to promote it.
 
 Tasks run in the mlops venv of the Airflow image (see docker/airflow.Dockerfile) and only call
 mlops.pipeline. They pass the MLflow run ID to each other, never data.
@@ -32,15 +32,21 @@ def training_pipeline():
         return pipeline.train(batch)
 
     @task.external_python(python=MLOPS_PYTHON, expect_airflow=False)
-    def evaluate(run_id: str) -> dict[str, float]:
+    def evaluate(mlflow_run_id: str) -> dict[str, float]:
         from mlops import pipeline
 
-        return pipeline.evaluate(run_id)
+        return pipeline.evaluate(mlflow_run_id)
+
+    @task.external_python(python=MLOPS_PYTHON, expect_airflow=False)
+    def promote(mlflow_run_id: str) -> bool:
+        from mlops import pipeline
+
+        return pipeline.promote(mlflow_run_id)
 
     batch = "{{ params.batch }}"
-    run_id = train(batch)
-    validate(batch) >> run_id
-    evaluate(run_id)
+    mlflow_run_id = train(batch)
+    validate(batch) >> mlflow_run_id
+    evaluate(mlflow_run_id) >> promote(mlflow_run_id)
 
 
 training_pipeline()

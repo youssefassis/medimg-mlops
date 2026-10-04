@@ -27,6 +27,8 @@ and MLflow running locally.
 4. Open Airflow at http://localhost:8080 and MLflow at http://localhost:5001.
 5. Train a model: in Airflow, trigger `training_pipeline` and pick a batch (1–5). It validates
    the batch, trains on it, scores the model on `test/`, and logs the run to MLflow.
+   The model is then registered as `pneumonia-classifier`, and gets the `production` alias
+   if it passes the gate in `config/promotion.yaml`.
    On CPU this takes about 20 minutes.
 
    To run the same steps outside Airflow (faster on a Mac GPU):
