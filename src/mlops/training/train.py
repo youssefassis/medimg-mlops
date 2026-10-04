@@ -13,7 +13,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from mlops.config import TrainingConfig
-from mlops.data.batches import read_batch, split_off_patients
+from mlops.data.batches import batch_path, read_batch, split_off_patients
 from mlops.data.chest_xray import LABELS, Sample
 from mlops.data.dataset import ChestXrayDataset
 from mlops.data.transforms import IMAGE_SIZE, build_transform
@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 
 
 def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> str:
-    """Trains on `data/batches/batch_<config.batch>.csv` and returns the MLflow run ID.
+    """Trains on batch number `config.batch` and returns the MLflow run ID.
 
     Keeps the epoch with the best validation ROC AUC. Scoring on test/ is done separately,
     by `mlops.evaluation.evaluate.evaluate_run`.
     """
     torch.manual_seed(config.seed)
     device = pick_device(config.device)
-    samples = read_batch(data_dir / "batches" / f"batch_{config.batch}.csv")
+    samples = read_batch(batch_path(data_dir, config.batch))
     train_samples, val_samples = split_off_patients(samples, config.val_fraction, config.seed)
 
     train_loader = make_loader(train_samples, data_dir, config, shuffle=True)

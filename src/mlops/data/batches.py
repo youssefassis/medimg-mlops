@@ -82,6 +82,10 @@ def write_batches(batches: list[list[Sample]], out_dir: Path) -> list[Path]:
     return paths
 
 
+def batch_path(data_dir: Path, number: int) -> Path:
+    return data_dir / "batches" / f"batch_{number}.csv"
+
+
 def read_batch(path: Path) -> list[Sample]:
     with path.open(newline="") as file:
         return [
