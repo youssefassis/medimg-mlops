@@ -1,0 +1,9 @@
+# Used by scripts/ingest_rsna.py. data_dir is relative to the project root.
+data_dir: data
+sample_size: 3000 # of 26,684 training images; about 2.5 minutes and 1.2 GB
+seed: 42
+max_age: 120
+# The quality limits sit beyond the worst usable images seen in notebooks/explore_rsna.py:
+# contrast down to 27, and up to 56% near-black pixels for a chest framed by black borders.
+min_contrast: 10
+max_near_black: 0.7

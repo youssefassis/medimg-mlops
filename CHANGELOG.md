@@ -5,7 +5,8 @@ Notable changes, one entry per step. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
-- Notebook exploring the RSNA DICOM data: headers, labels, shortcuts, pixels and preprocessing
+- Ingest RSNA: header and pixel checks, de-identification, PNGs with a manifest (#26)
+- Notebook exploring the RSNA DICOM data: headers, labels, shortcuts, pixels and preprocessing (#25)
 - Read DICOM pixel data into 8-bit grayscale images
 - Model registry: each trained model is registered, and promoted to production only if it passes the gate (#14)
 - Training pipeline DAG: validate a batch, train, evaluate on the test set (#13)
