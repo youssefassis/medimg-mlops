@@ -36,7 +36,8 @@ jobs:
 
   dags:
     # Airflow pins many packages of its own, so it stays out of the project environment.
-    # The DAG tests install it on their own.
+    # The DAG tests install it on their own, and skip tests/conftest.py, which needs the
+    # project's packages.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,4 +47,4 @@ jobs:
       - run: >-
           uv run --isolated --no-project --python 3.12
           --with apache-airflow==3.3.2 --with pytest==9.1.1
-          pytest tests/dags
+          pytest tests/dags --confcutdir=tests/dags
