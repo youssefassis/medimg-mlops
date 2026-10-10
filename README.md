@@ -1,7 +1,7 @@
-# mlops
+# medimg-mlops
 
-Learning MLOps by building a small pipeline: pneumonia detection on chest X-rays, with Airflow
-and MLflow running locally.
+Learning MLOps for medical imaging by building a small pipeline: pneumonia detection on chest
+X-rays, with Airflow and MLflow running locally.
 
 ## Requirements
 
@@ -44,6 +44,15 @@ Run the tests with `uv run pytest`. The DAG tests need Airflow and run on their 
 uv run --isolated --no-project --with apache-airflow==3.3.2 --with pytest==9.1.1 pytest tests/dags
 ```
 
+## Exploring the RSNA DICOM data
+
+The notebook `notebooks/explore_rsna.py` looks at the RSNA pneumonia dataset: DICOM headers,
+labels, shortcuts a model could learn, pixels and preprocessing options. Get the data first
+(see [data/README.md](data/README.md)), then open it with [marimo](https://marimo.io):
+```bash
+uv run --group notebooks marimo edit notebooks/explore_rsna.py
+```
+
 ## Project structure
 
 ```
@@ -51,6 +60,7 @@ config/    settings for training and batches
 dags/      Airflow DAGs
 data/      the dataset and batches (not in git)
 docker/    Dockerfiles and database setup
+notebooks/ marimo notebooks to explore the data
 scripts/   commands to run by hand
 src/mlops/ the project code
 tests/     tests, run on a tiny fake dataset
