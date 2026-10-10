@@ -1,4 +1,5 @@
-"""Splits samples by patient, into batches that simulate data arriving over time.
+"""Splits samples by patient: a held-out test set, then batches that simulate data arriving
+over time.
 
 The splits work on any rows with a label and a patient_id: Samples, or the RSNA manifest rows.
 """
@@ -20,11 +21,6 @@ class PatientRow(Protocol):
 
     @property
     def patient_id(self) -> str: ...
-
-
-def drop_patients(samples: list[Sample], patient_ids: set[str]) -> list[Sample]:
-    """Removes every image of the given patients, e.g. the ones also in the test set."""
-    return [sample for sample in samples if sample.patient_id not in patient_ids]
 
 
 def by_label(row: PatientRow) -> Hashable:
@@ -109,8 +105,13 @@ def batch_path(data_dir: Path, number: int) -> Path:
     return data_dir / "batches" / f"batch_{number}.csv"
 
 
+def heldout_path(data_dir: Path) -> Path:
+    """The held-out test set: never trained on, used to score every model."""
+    return data_dir / "batches" / "test.csv"
+
+
 def read_batch(path: Path) -> list[Sample]:
-    """Reads a batch. Columns other than path, label and patient_id are ignored."""
+    """Reads a batch or the test set. Columns other than path, label and patient_id are ignored."""
     with path.open(newline="") as file:
         return [
             Sample(Path(row["path"]), row["label"], row["patient_id"])

@@ -8,8 +8,10 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from mlops.data.chest_xray import LABELS, list_samples
+from mlops.data.batches import heldout_path, read_batch
+from mlops.data.chest_xray import LABELS
 from mlops.data.dataset import ChestXrayDataset
+from mlops.data.lineage import log_dataset
 from mlops.data.transforms import build_transform
 from mlops.evaluation.metrics import compute_metrics
 
@@ -29,14 +31,16 @@ def evaluate_model(model: nn.Module, loader: DataLoader, device: torch.device) -
 
 
 def evaluate_run(run_id: str, data_dir: Path, batch_size: int = 32) -> dict[str, float]:
-    """Scores the run's logged model on test/ and logs the metrics to the same run."""
+    """Scores the run's logged model on the held-out test set and logs the metrics to the same
+    run, with the test set as a dataset input."""
     model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
-    samples = list_samples(data_dir, "test")
+    samples = read_batch(heldout_path(data_dir))
     loader = DataLoader(ChestXrayDataset(samples, data_dir, build_transform()), batch_size)
 
     metrics = with_prefix("test_", evaluate_model(model, loader, torch.device("cpu")))
     with mlflow.start_run(run_id=run_id):
         mlflow.log_param("n_test", len(samples))
+        log_dataset(heldout_path(data_dir), context="testing")
         mlflow.log_metrics(metrics)
     logger.info("run %s: %s", run_id, metrics)
     return metrics

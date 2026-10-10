@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from mlops.data.batches import (
-    drop_patients,
+    heldout_path,
     read_batch,
     split_by_patient,
     split_off_patients,
@@ -165,7 +165,7 @@ def test_split_names_the_group_with_too_few_patients():
 
 
 def test_written_rows_keep_extra_columns_and_read_back_as_samples(tmp_path):
-    path = tmp_path / "rows.csv"
+    path = heldout_path(tmp_path)
 
     write_rows(path, ViewRow, VIEW_ROWS[:2])
 
@@ -174,10 +174,3 @@ def test_written_rows_keep_extra_columns_and_read_back_as_samples(tmp_path):
     assert read_batch(path) == [
         Sample(Path(row.path), row.label, row.patient_id) for row in VIEW_ROWS[:2]
     ]
-
-
-def test_drop_patients_removes_all_their_images():
-    kept = drop_patients(SAMPLES, {"NORMAL-p0", "PNEUMONIA-p3"})
-
-    assert len(kept) == len(SAMPLES) - 4
-    assert not {"NORMAL-p0", "PNEUMONIA-p3"} & {sample.patient_id for sample in kept}

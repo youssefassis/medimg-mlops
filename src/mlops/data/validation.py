@@ -27,7 +27,7 @@ def validate_batch(samples: list[Sample], data_dir: Path, test_patients: set[str
     if unknown := labels - set(LABELS):
         problems.append(f"unknown labels {sorted(unknown)}")
     if shared := {sample.patient_id for sample in samples} & test_patients:
-        problems.append(f"{len(shared)} patients also in test/: {sorted(shared)[:5]}")
+        problems.append(f"{len(shared)} patients also in the test set: {sorted(shared)[:5]}")
 
     if problems:
         shown = problems[:MAX_PROBLEMS_SHOWN]

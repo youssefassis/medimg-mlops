@@ -15,16 +15,18 @@ CONFIG_DIR = Path(__file__).parents[1] / "config"
 
 def test_load_config(tmp_path):
     path = tmp_path / "batches.yaml"
-    path.write_text("data_dir: data\nn_batches: 5\nseed: 42\n")
+    path.write_text("data_dir: data\ntest_fraction: 0.2\nn_batches: 5\nseed: 42\n")
 
-    assert load_config(path, BatchesConfig) == BatchesConfig("data", n_batches=5, seed=42)
+    assert load_config(path, BatchesConfig) == BatchesConfig(
+        "data", test_fraction=0.2, n_batches=5, seed=42
+    )
 
 
 @pytest.mark.parametrize(
     ("content", "error"),
     [
-        ("data_dir: data\nn_batches: 5\n", "seed"),
-        ("data_dir: data\nn_batches: 5\nseed: 42\nextra: 1\n", "extra"),
+        ("data_dir: data\ntest_fraction: 0.2\nn_batches: 5\n", "seed"),
+        ("data_dir: data\ntest_fraction: 0.2\nn_batches: 5\nseed: 42\nextra: 1\n", "extra"),
     ],
 )
 def test_load_config_fails_on_missing_or_unknown_key(tmp_path, content, error):

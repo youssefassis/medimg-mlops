@@ -30,7 +30,7 @@ def test_valid_batch_passes(data_dir):
         ([NORMAL, PNEUMONIA, Sample(Path("broken.jpeg"), "NORMAL", "n2")], set(), "broken.jpeg"),
         ([NORMAL], set(), r"no images for \['PNEUMONIA'\]"),
         ([NORMAL, PNEUMONIA, Sample(Path("n1.jpeg"), "COVID", "c1")], set(), "unknown labels"),
-        ([NORMAL, PNEUMONIA], {"p1"}, "1 patients also in test"),
+        ([NORMAL, PNEUMONIA], {"p1"}, "1 patients also in the test set"),
     ],
 )
 def test_invalid_batch_fails(data_dir, samples, test_patients, problem):

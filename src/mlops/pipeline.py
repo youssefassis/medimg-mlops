@@ -9,8 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from mlops.config import PromotionConfig, TrainingConfig, load_config
-from mlops.data.batches import batch_path, read_batch
-from mlops.data.chest_xray import list_samples
+from mlops.data.batches import batch_path, heldout_path, read_batch
 from mlops.data.validation import validate_batch
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.registry.promotion import promote as promote_model
@@ -26,7 +25,7 @@ def validate(batch: int) -> None:
     config = _training_config(batch)
     data_dir = ROOT / config.data_dir
     samples = read_batch(batch_path(data_dir, batch))
-    test_patients = {sample.patient_id for sample in list_samples(data_dir, "test")}
+    test_patients = {sample.patient_id for sample in read_batch(heldout_path(data_dir))}
     validate_batch(samples, data_dir, test_patients)
     logger.info("batch %d is valid: %d images", batch, len(samples))
 

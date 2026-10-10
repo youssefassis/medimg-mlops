@@ -1,14 +1,22 @@
-"""Splits train/ and val/ into patient-level batches, written as CSVs to data/batches/.
+"""Splits the ingested RSNA images into a held-out test set and patient-level batches.
 
-Patients that also have images in test/ are left out, so they can't leak into training.
+Reads data/processed/rsna/manifest.csv (written by scripts/ingest_rsna.py) and writes the CSVs to
+data/batches/. Every split keeps the share of each label and view.
 """
 
 from collections import Counter
 from pathlib import Path
 
 from mlops.config import BatchesConfig, load_config
-from mlops.data.batches import drop_patients, split_by_patient, write_batches
-from mlops.data.chest_xray import list_samples
+from mlops.data.batches import (
+    heldout_path,
+    split_by_patient,
+    split_off_patients,
+    write_batches,
+    write_rows,
+)
+from mlops.data.lineage import digest
+from mlops.data.rsna import ManifestRow, by_label_and_view, read_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,17 +24,19 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> None:
     config = load_config(ROOT / "config" / "batches.yaml", BatchesConfig)
     data_dir = ROOT / config.data_dir
-    samples = list_samples(data_dir, "train") + list_samples(data_dir, "val")
-    test_patients = {sample.patient_id for sample in list_samples(data_dir, "test")}
-    kept = drop_patients(samples, test_patients)
-    print(f"Left out {len(samples) - len(kept)} images of patients also in test/")
+    rows = read_manifest(data_dir)
 
-    batches = split_by_patient(kept, config.n_batches, config.seed)
+    train_rows, test_rows = split_off_patients(
+        rows, config.test_fraction, config.seed, by_label_and_view
+    )
+    batches = split_by_patient(train_rows, config.n_batches, config.seed, by_label_and_view)
+    write_rows(heldout_path(data_dir), ManifestRow, test_rows)
     paths = write_batches(batches, data_dir / "batches")
 
-    for path, batch in zip(paths, batches, strict=True):
-        labels = Counter(sample.label for sample in batch)
-        print(f"{path.relative_to(ROOT)}: {len(batch)} images {dict(sorted(labels.items()))}")
+    for path, split in [(heldout_path(data_dir), test_rows), *zip(paths, batches, strict=True)]:
+        labels = dict(sorted(Counter(row.label for row in split).items()))
+        views = dict(sorted(Counter(row.view for row in split).items()))
+        print(f"{path.relative_to(ROOT)} ({digest(path)}): {len(split)} images {labels} {views}")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ import yaml
 @dataclass(frozen=True)
 class BatchesConfig:
     data_dir: str  # relative to the project root
+    test_fraction: float  # share of patients held out as the test set
     n_batches: int
     seed: int
 

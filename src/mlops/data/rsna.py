@@ -49,6 +49,22 @@ class Rejection:
     reasons: str
 
 
+def by_label_and_view(row: ManifestRow) -> tuple[str, str]:
+    """Splits by label and view keep the AP/PA mix of each class, so the view shortcut found in
+    notebooks/explore_rsna.py weighs the same in every split."""
+    return row.label, row.view
+
+
+def read_manifest(data_dir: Path) -> list[ManifestRow]:
+    with (data_dir / PROCESSED_DIR / "manifest.csv").open(newline="") as file:
+        return [
+            ManifestRow(
+                **row | {"age": int(row["age"]), "pixel_spacing_mm": float(row["pixel_spacing_mm"])}
+            )
+            for row in csv.DictReader(file)
+        ]
+
+
 def to_label(rsna_class: str) -> str:
     """Lung Opacity is PNEUMONIA. Normal and No Lung Opacity / Not Normal are both NORMAL."""
     normal, pneumonia = LABELS

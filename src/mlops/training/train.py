@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> str:
     """Trains on batch number `config.batch` and returns the MLflow run ID.
 
-    Keeps the epoch with the best validation ROC AUC. Scoring on test/ is done separately,
-    by `mlops.evaluation.evaluate.evaluate_run`.
+    Keeps the epoch with the best validation ROC AUC. Scoring on the test set is done
+    separately, by `mlops.evaluation.evaluate.evaluate_run`.
     """
     torch.manual_seed(config.seed)
     device = pick_device(config.device)

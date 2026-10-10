@@ -10,8 +10,10 @@ from mlops.data.dicom import to_uint8
 from mlops.data.rsna import (
     PROCESSED_DIR,
     RAW_DIR,
+    by_label_and_view,
     ingest,
     read_classes,
+    read_manifest,
     sample_patients,
     to_label,
 )
@@ -137,3 +139,22 @@ def test_ingest_replaces_earlier_images(raw_rsna):
     ingest(data_dir, CONFIG, SECRET)
 
     assert not stale.exists()
+
+
+def test_read_manifest_reads_what_ingest_wrote(raw_rsna):
+    data_dir, _ = raw_rsna
+
+    manifest, _ = ingest(data_dir, CONFIG, SECRET)
+
+    assert read_manifest(data_dir) == manifest
+
+
+def test_by_label_and_view(raw_rsna):
+    data_dir, _ = raw_rsna
+    manifest, _ = ingest(data_dir, CONFIG, SECRET)
+
+    assert {by_label_and_view(row) for row in manifest} == {
+        ("PNEUMONIA", "PA"),
+        ("NORMAL", "AP"),
+        ("NORMAL", "PA"),
+    }
