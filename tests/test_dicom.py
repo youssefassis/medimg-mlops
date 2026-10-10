@@ -1,33 +1,22 @@
 import numpy as np
 import pytest
-from pydicom import Dataset
-from pydicom.uid import ExplicitVRLittleEndian
 
 from mlops.data.dicom import to_uint8
 
 
-def make_dicom(pixels: np.ndarray, photometric: str = "MONOCHROME2", **tags) -> Dataset:
-    dataset = Dataset()
-    dataset.set_pixel_data(pixels, photometric, bits_stored=pixels.itemsize * 8)
-    dataset.file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
-    for keyword, value in tags.items():
-        setattr(dataset, keyword, value)
-    return dataset
-
-
-def test_stretches_to_full_range():
+def test_stretches_to_full_range(make_dicom):
     dataset = make_dicom(np.array([[10, 20], [30, 50]], dtype=np.uint8))
 
     assert to_uint8(dataset).tolist() == [[0, 64], [128, 255]]
 
 
-def test_inverts_monochrome1():
+def test_inverts_monochrome1(make_dicom):
     dataset = make_dicom(np.array([[0, 100]], dtype=np.uint8), photometric="MONOCHROME1")
 
     assert to_uint8(dataset).tolist() == [[255, 0]]
 
 
-def test_applies_rescale_before_window():
+def test_applies_rescale_before_window(make_dicom):
     # Stored 1024 is 0 after rescale, so a window centred on 0 must clip around it.
     pixels = np.array([[0, 924, 1024, 1124, 4000]], dtype=np.uint16)
     dataset = make_dicom(
@@ -41,13 +30,13 @@ def test_applies_rescale_before_window():
     assert 0 < image[0, 2] < 255
 
 
-def test_constant_image_is_black():
+def test_constant_image_is_black(make_dicom):
     dataset = make_dicom(np.full((2, 2), 7, dtype=np.uint8))
 
     assert to_uint8(dataset).tolist() == [[0, 0], [0, 0]]
 
 
-def test_rejects_colour_images():
+def test_rejects_colour_images(make_dicom):
     dataset = make_dicom(np.zeros((2, 2, 3), dtype=np.uint8), photometric="RGB")
 
     with pytest.raises(ValueError, match="3 channels"):
