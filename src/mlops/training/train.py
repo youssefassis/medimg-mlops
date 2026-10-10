@@ -18,17 +18,21 @@ from mlops.data.chest_xray import LABELS, Sample
 from mlops.data.dataset import ChestXrayDataset
 from mlops.data.lineage import log_dataset
 from mlops.data.transforms import IMAGE_SIZE, build_transform
-from mlops.evaluation.evaluate import evaluate_model, with_prefix
+from mlops.evaluation.evaluate import evaluate_model, predict, with_prefix
+from mlops.evaluation.metrics import choose_threshold
 from mlops.training.model import build_model
 
 logger = logging.getLogger(__name__)
 
 
-def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> str:
+def train(
+    config: TrainingConfig, data_dir: Path, target_sensitivity: float, pretrained: bool = True
+) -> str:
     """Trains on batch number `config.batch` and returns the MLflow run ID.
 
-    Keeps the epoch with the best validation ROC AUC. Scoring on the test set is done
-    separately, by `mlops.evaluation.evaluate.evaluate_run`.
+    Keeps the epoch with the best validation ROC AUC, then logs as `threshold` the highest
+    decision threshold that reaches `target_sensitivity` on validation. Scoring on the test set
+    is done separately, by `mlops.evaluation.evaluate.evaluate_run`.
     """
     torch.manual_seed(config.seed)
     device = pick_device(config.device)
@@ -83,8 +87,18 @@ def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> st
                 best_state = copy.deepcopy(model.state_dict())
 
         model.load_state_dict(best_state)
-        mlflow.log_param("best_epoch", best_epoch)
-        logger.info("best epoch %d, val_roc_auc %.4f", best_epoch, best_auc)
+        model.eval()
+        threshold = choose_threshold(*predict(model, val_loader, device), target_sensitivity)
+        mlflow.log_params(
+            {
+                "best_epoch": best_epoch,
+                "target_sensitivity": target_sensitivity,
+                "threshold": threshold,
+            }
+        )
+        logger.info(
+            "best epoch %d, val_roc_auc %.4f, threshold %.3f", best_epoch, best_auc, threshold
+        )
 
         log_model(model.cpu())
         return run.info.run_id
