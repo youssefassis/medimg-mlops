@@ -39,9 +39,11 @@ X-rays, with Airflow and MLflow running locally.
 
 Stop everything with `docker compose down`.
 
-Run the tests with `uv run pytest`. The DAG tests need Airflow and run on their own:
+Run the tests with `uv run pytest`. The DAG tests need Airflow and run on their own, without
+the shared fixtures in `tests/conftest.py`:
 ```bash
-uv run --isolated --no-project --with apache-airflow==3.3.2 --with pytest==9.1.1 pytest tests/dags
+uv run --isolated --no-project --with apache-airflow==3.3.2 --with pytest==9.1.1 \
+  pytest tests/dags --confcutdir=tests/dags
 ```
 
 ## Exploring the RSNA DICOM data
