@@ -61,5 +61,7 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
     assert run.data.params["n_test"] == "4"
     assert run.data.metrics["test_roc_auc"] == test_metrics["test_roc_auc"]
     assert {"train_loss", "val_roc_auc", "test_recall", "test_roc_auc"} <= run.data.metrics.keys()
+    (dataset_input,) = run.inputs.dataset_inputs
+    assert (dataset_input.tags[0].value, dataset_input.dataset.name) == ("training", "batch_1")
     model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
     assert model(torch.zeros(3, 3, 224, 224)).shape == (3, 2)
