@@ -2,23 +2,9 @@
 
 Not tracked by git, except this file and `.gitignore`.
 
-Download the [chest X-ray dataset](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)
-and unzip it into `raw/chest_xray/`:
-
-```
-raw/chest_xray/
-  train/  NORMAL 1341 · PNEUMONIA 3875
-  val/    NORMAL    8 · PNEUMONIA    8
-  test/   NORMAL  234 · PNEUMONIA  390
-```
-
-`uv run python scripts/make_batches.py` splits `train/` and `val/` into 5 batches in `batches/`,
-to simulate new data arriving over time. A patient is never in two batches, and patients that also
-have images in `test/` are left out. `test/` is kept as is for evaluation.
-
 ## RSNA pneumonia (DICOM)
 
-Used by `notebooks/explore_rsna.py`. Join the
+The training data. Join the
 [RSNA Pneumonia Detection Challenge](https://www.kaggle.com/competitions/rsna-pneumonia-detection-challenge),
 accept its rules, download the data (3.7 GB) and unzip it into `raw/rsna/`:
 
@@ -51,3 +37,30 @@ processed/rsna/
   (HIPAA Safe Harbor). `source_sha256` links each row back to its raw file.
 - **Checks**: header values (modality, view, sex, age, square pixel spacing) and pixels (contrast,
   share of near-black pixels). Failed files are listed in `rejected.csv`, never dropped silently.
+
+### Test set and batches
+
+`uv run python scripts/make_batches.py` splits `manifest.csv` by patient into `batches/`:
+
+```
+batches/
+  test.csv              20% of patients, held out: never trained on, scores every model
+  batch_1.csv … batch_5.csv   the rest, to simulate new data arriving over time
+```
+
+Every file keeps the manifest's columns and the same share of each label and view, so the AP
+shortcut weighs the same in each split. Each training run logs its batch and the test set in
+MLflow with a hash of their content, so a model always points to the exact images it saw.
+
+## Pediatric chest X-rays (JPEG)
+
+Kept for a later step, as data from another population. Download the
+[chest X-ray dataset](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)
+and unzip it into `raw/chest_xray/`:
+
+```
+raw/chest_xray/
+  train/  NORMAL 1341 · PNEUMONIA 3875
+  val/    NORMAL    8 · PNEUMONIA    8
+  test/   NORMAL  234 · PNEUMONIA  390
+```

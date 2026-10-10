@@ -5,6 +5,7 @@ Notable changes, one entry per step. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- Train on RSNA: a held-out test set and batches split by patient, label and view; each run logs its datasets with a content hash (#27)
 - Ingest RSNA: header and pixel checks, de-identification, PNGs with a manifest (#26)
 - Notebook exploring the RSNA DICOM data: headers, labels, shortcuts, pixels and preprocessing (#25)
 - Read DICOM pixel data into 8-bit grayscale images
