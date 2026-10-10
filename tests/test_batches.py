@@ -1,4 +1,5 @@
 import csv
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -9,8 +10,21 @@ from mlops.data.batches import (
     split_by_patient,
     split_off_patients,
     write_batches,
+    write_rows,
 )
 from mlops.data.chest_xray import Sample
+
+
+@dataclass(frozen=True)
+class ViewRow:
+    path: str
+    label: str
+    patient_id: str
+    view: str
+
+
+def by_label_and_view(row: ViewRow) -> tuple[str, str]:
+    return row.label, row.view
 
 
 def make_samples(label: str, n_patients: int, images_per_patient: int = 2) -> list[Sample]:
@@ -112,6 +126,54 @@ def test_read_batch_reads_what_write_batches_wrote(tmp_path):
     paths = write_batches(batches, tmp_path)
 
     assert [read_batch(path) for path in paths] == batches
+
+
+VIEW_ROWS = [
+    ViewRow(f"{label}-{view}-{i}.png", label, f"{label}-{view}-p{i}", view)
+    for label, view, n_patients in [
+        ("NORMAL", "AP", 10),
+        ("NORMAL", "PA", 30),
+        ("PNEUMONIA", "AP", 15),
+        ("PNEUMONIA", "PA", 5),
+    ]
+    for i in range(n_patients)
+]
+
+
+def test_split_off_patients_keeps_the_view_mix_of_each_label():
+    _, held_out = split_off_patients(VIEW_ROWS, fraction=0.2, seed=0, stratum=by_label_and_view)
+
+    groups = [(row.label, row.view) for row in held_out]
+    assert groups.count(("NORMAL", "AP")) == 2
+    assert groups.count(("NORMAL", "PA")) == 6
+    assert groups.count(("PNEUMONIA", "AP")) == 3
+    assert groups.count(("PNEUMONIA", "PA")) == 1
+
+
+def test_split_by_patient_keeps_the_view_mix_in_every_batch():
+    batches = split_by_patient(VIEW_ROWS, n_batches=5, seed=0, stratum=by_label_and_view)
+
+    for batch in batches:
+        groups = [(row.label, row.view) for row in batch]
+        assert groups.count(("NORMAL", "AP")) == 2
+        assert groups.count(("PNEUMONIA", "PA")) == 1
+
+
+def test_split_names_the_group_with_too_few_patients():
+    with pytest.raises(ValueError, match=r"\('PNEUMONIA', 'PA'\) has 5 patients"):
+        split_by_patient(VIEW_ROWS, n_batches=6, seed=0, stratum=by_label_and_view)
+
+
+def test_written_rows_keep_extra_columns_and_read_back_as_samples(tmp_path):
+    path = tmp_path / "rows.csv"
+
+    write_rows(path, ViewRow, VIEW_ROWS[:2])
+
+    with path.open() as file:
+        assert next(csv.reader(file)) == ["path", "label", "patient_id", "view"]
+    assert read_batch(path) == [
+        Sample(Path(row.path), row.label, row.patient_id) for row in VIEW_ROWS[:2]
+    ]
 
 
 def test_drop_patients_removes_all_their_images():

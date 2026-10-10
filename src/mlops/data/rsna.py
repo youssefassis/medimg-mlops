@@ -8,13 +8,14 @@ import csv
 import hashlib
 import io
 import random
-from dataclasses import asdict, dataclass, fields
+from dataclasses import dataclass
 from pathlib import Path
 
 import pydicom
 from PIL import Image
 
 from mlops.config import IngestionConfig
+from mlops.data.batches import write_rows
 from mlops.data.chest_xray import LABELS
 from mlops.data.deidentify import pseudonymize
 from mlops.data.dicom import to_uint8
@@ -124,13 +125,6 @@ def ingest(
             raise RuntimeError(f"Failed to ingest {path}") from error
         (manifest if isinstance(result, ManifestRow) else rejected).append(result)
 
-    _write_rows(out_dir / "manifest.csv", ManifestRow, manifest)
-    _write_rows(out_dir / "rejected.csv", Rejection, rejected)
+    write_rows(out_dir / "manifest.csv", ManifestRow, manifest)
+    write_rows(out_dir / "rejected.csv", Rejection, rejected)
     return manifest, rejected
-
-
-def _write_rows(path: Path, row_class: type, rows: list) -> None:
-    with path.open("w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=[field.name for field in fields(row_class)])
-        writer.writeheader()
-        writer.writerows(asdict(row) for row in rows)
