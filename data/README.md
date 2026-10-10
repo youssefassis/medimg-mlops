@@ -30,3 +30,24 @@ raw/rsna/
   stage_2_detailed_class_info.csv  the class of each row: Normal, Lung Opacity,
                                    or No Lung Opacity / Not Normal
 ```
+
+### Ingesting RSNA
+
+`uv run --env-file .env python scripts/ingest_rsna.py` turns a sample of the training images
+(size in `config/ingestion.yaml`) into a curated dataset in `processed/rsna/`:
+
+```
+processed/rsna/
+  images/        one PNG per accepted image, named by the start of its source file hash
+  manifest.csv   path, label, patient_id, rsna_class, view, sex, age, pixel_spacing_mm,
+                 source_sha256
+  rejected.csv   source_sha256 and the reasons, for files that failed a check
+```
+
+- **Label**: `Lung Opacity` is PNEUMONIA; `Normal` and `No Lung Opacity / Not Normal` are NORMAL.
+  `rsna_class` keeps the original class.
+- **De-identification**: only the manifest's fields are kept from the DICOM header. `patient_id`
+  is a keyed pseudonym (`DEID_SECRET` in `.env`), and ages above 89 are written as 90
+  (HIPAA Safe Harbor). `source_sha256` links each row back to its raw file.
+- **Checks**: header values (modality, view, sex, age, square pixel spacing) and pixels (contrast,
+  share of near-black pixels). Failed files are listed in `rejected.csv`, never dropped silently.

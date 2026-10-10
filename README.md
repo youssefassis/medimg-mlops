@@ -53,10 +53,20 @@ labels, shortcuts a model could learn, pixels and preprocessing options. Get the
 uv run --group notebooks marimo edit notebooks/explore_rsna.py
 ```
 
+## Ingesting the RSNA DICOM data
+
+Add a `DEID_SECRET` to `.env` (see `.env.example`), then:
+```bash
+uv run --env-file .env python scripts/ingest_rsna.py
+```
+It checks and de-identifies a sample of the RSNA images and saves them as PNGs with a manifest,
+in `data/processed/rsna/` (see [data/README.md](data/README.md)). 3000 images take about
+2.5 minutes.
+
 ## Project structure
 
 ```
-config/    settings for training and batches
+config/    settings for ingestion, batches, training and promotion
 dags/      Airflow DAGs
 data/      the dataset and batches (not in git)
 docker/    Dockerfiles and database setup
