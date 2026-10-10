@@ -16,6 +16,7 @@ from mlops.config import TrainingConfig
 from mlops.data.batches import batch_path, read_batch, split_off_patients
 from mlops.data.chest_xray import LABELS, Sample
 from mlops.data.dataset import ChestXrayDataset
+from mlops.data.lineage import log_dataset
 from mlops.data.transforms import IMAGE_SIZE, build_transform
 from mlops.evaluation.evaluate import evaluate_model, with_prefix
 from mlops.training.model import build_model
@@ -26,8 +27,8 @@ logger = logging.getLogger(__name__)
 def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> str:
     """Trains on batch number `config.batch` and returns the MLflow run ID.
 
-    Keeps the epoch with the best validation ROC AUC. Scoring on test/ is done separately,
-    by `mlops.evaluation.evaluate.evaluate_run`.
+    Keeps the epoch with the best validation ROC AUC. Scoring on the test set is done
+    separately, by `mlops.evaluation.evaluate.evaluate_run`.
     """
     torch.manual_seed(config.seed)
     device = pick_device(config.device)
@@ -58,6 +59,7 @@ def train(config: TrainingConfig, data_dir: Path, pretrained: bool = True) -> st
                 **weight_params,
             }
         )
+        log_dataset(batch_path(data_dir, config.batch), context="training")
 
         best_auc, best_epoch, best_state = -1.0, 0, None
         for epoch in range(1, config.epochs + 1):

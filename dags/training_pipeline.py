@@ -1,4 +1,5 @@
-"""Validates a batch, trains on it, scores the model on test/, then decides whether to promote it.
+"""Validates a batch, trains on it, scores the model on the test set, then decides whether to
+promote it.
 
 Tasks run in the mlops venv of the Airflow image (see docker/airflow.Dockerfile) and only call
 mlops.pipeline. They pass the MLflow run ID to each other, never data.

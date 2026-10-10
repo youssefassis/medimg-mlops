@@ -1,4 +1,5 @@
 # Used by scripts/make_batches.py. data_dir is relative to the project root.
 data_dir: data
+test_fraction: 0.2
 n_batches: 5
 seed: 42

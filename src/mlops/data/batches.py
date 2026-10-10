@@ -1,62 +1,75 @@
-"""Splits samples into batches by patient, to simulate data arriving over time."""
+"""Splits samples by patient: a held-out test set, then batches that simulate data arriving
+over time.
+
+The splits work on any rows with a label and a patient_id: Samples, or the RSNA manifest rows.
+"""
 
 import csv
 import random
 from collections import defaultdict
+from collections.abc import Callable, Hashable
+from dataclasses import asdict, fields
 from pathlib import Path
+from typing import Protocol
 
 from mlops.data.chest_xray import Sample
 
-CSV_COLUMNS = ("path", "label", "patient_id")
+
+class PatientRow(Protocol):
+    @property
+    def label(self) -> str: ...
+
+    @property
+    def patient_id(self) -> str: ...
 
 
-def drop_patients(samples: list[Sample], patient_ids: set[str]) -> list[Sample]:
-    """Removes every image of the given patients, e.g. the ones also in the test set."""
-    return [sample for sample in samples if sample.patient_id not in patient_ids]
+def by_label(row: PatientRow) -> Hashable:
+    return row.label
 
 
-def split_by_patient(samples: list[Sample], n_batches: int, seed: int) -> list[list[Sample]]:
-    """Splits samples into n_batches of similar size, with each patient in one batch only.
+def split_by_patient[T: PatientRow](
+    rows: list[T], n_batches: int, seed: int, stratum: Callable[[T], Hashable] = by_label
+) -> list[list[T]]:
+    """Splits rows into n_batches of similar size, with each patient in one batch only.
 
-    Each class is split on its own, so every batch keeps the class balance.
+    Each stratum (by default the label) is split on its own, so every batch keeps its share.
     """
     if n_batches < 1:
         raise ValueError(f"n_batches must be at least 1, got {n_batches}")
 
-    by_label = _group_by_label_and_patient(samples)
-    batches: list[list[Sample]] = [[] for _ in range(n_batches)]
+    batches: list[list[T]] = [[] for _ in range(n_batches)]
     rng = random.Random(seed)
-    for label, by_patient in sorted(by_label.items()):
+    for group, by_patient in sorted(_group_by_stratum_and_patient(rows, stratum).items()):
         if len(by_patient) < n_batches:
             raise ValueError(
-                f"{label} has {len(by_patient)} patients, too few for {n_batches} batches"
+                f"{group} has {len(by_patient)} patients, too few for {n_batches} batches"
             )
         patient_ids = sorted(by_patient)
         rng.shuffle(patient_ids)
-        label_counts = [0] * n_batches
+        counts = [0] * n_batches
         for patient_id in patient_ids:
-            smallest = label_counts.index(min(label_counts))
+            smallest = counts.index(min(counts))
             batches[smallest].extend(by_patient[patient_id])
-            label_counts[smallest] += len(by_patient[patient_id])
-    return [sorted(batch, key=lambda sample: sample.path) for batch in batches]
+            counts[smallest] += len(by_patient[patient_id])
+    return [sorted(batch, key=lambda row: str(row.path)) for batch in batches]
 
 
-def split_off_patients(
-    samples: list[Sample], fraction: float, seed: int
-) -> tuple[list[Sample], list[Sample]]:
-    """Holds out about `fraction` of the patients of each class, e.g. for validation.
+def split_off_patients[T: PatientRow](
+    rows: list[T], fraction: float, seed: int, stratum: Callable[[T], Hashable] = by_label
+) -> tuple[list[T], list[T]]:
+    """Holds out about `fraction` of the patients of each stratum, e.g. for validation.
 
-    Returns (kept, held_out). Each class keeps at least one patient on each side.
+    Returns (kept, held_out). Each stratum keeps at least one patient on each side.
     """
     if not 0 < fraction < 1:
         raise ValueError(f"fraction must be between 0 and 1, got {fraction}")
 
-    kept: list[Sample] = []
-    held_out: list[Sample] = []
+    kept: list[T] = []
+    held_out: list[T] = []
     rng = random.Random(seed)
-    for label, by_patient in sorted(_group_by_label_and_patient(samples).items()):
+    for group, by_patient in sorted(_group_by_stratum_and_patient(rows, stratum).items()):
         if len(by_patient) < 2:
-            raise ValueError(f"{label} has {len(by_patient)} patient, need at least 2 to split")
+            raise ValueError(f"{group} has {len(by_patient)} patient, need at least 2 to split")
         patient_ids = sorted(by_patient)
         rng.shuffle(patient_ids)
         n_held_out = min(max(round(len(patient_ids) * fraction), 1), len(patient_ids) - 1)
@@ -65,7 +78,16 @@ def split_off_patients(
     return kept, held_out
 
 
-def write_batches(batches: list[list[Sample]], out_dir: Path) -> list[Path]:
+def write_rows(path: Path, row_class: type, rows: list) -> None:
+    """Writes dataclass rows to a CSV, with one column per field."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=[field.name for field in fields(row_class)])
+        writer.writeheader()
+        writer.writerows(asdict(row) for row in rows)
+
+
+def write_batches(batches: list[list], out_dir: Path) -> list[Path]:
     """Writes one CSV per batch (batch_1.csv, batch_2.csv, ...) and removes older ones."""
     out_dir.mkdir(parents=True, exist_ok=True)
     for old_file in out_dir.glob("batch_*.csv"):
@@ -74,10 +96,7 @@ def write_batches(batches: list[list[Sample]], out_dir: Path) -> list[Path]:
     paths = []
     for number, batch in enumerate(batches, start=1):
         path = out_dir / f"batch_{number}.csv"
-        with path.open("w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(CSV_COLUMNS)
-            writer.writerows((sample.path, sample.label, sample.patient_id) for sample in batch)
+        write_rows(path, type(batch[0]), batch)
         paths.append(path)
     return paths
 
@@ -86,7 +105,13 @@ def batch_path(data_dir: Path, number: int) -> Path:
     return data_dir / "batches" / f"batch_{number}.csv"
 
 
+def heldout_path(data_dir: Path) -> Path:
+    """The held-out test set: never trained on, used to score every model."""
+    return data_dir / "batches" / "test.csv"
+
+
 def read_batch(path: Path) -> list[Sample]:
+    """Reads a batch or the test set. Columns other than path, label and patient_id are ignored."""
     with path.open(newline="") as file:
         return [
             Sample(Path(row["path"]), row["label"], row["patient_id"])
@@ -94,12 +119,17 @@ def read_batch(path: Path) -> list[Sample]:
         ]
 
 
-def _group_by_label_and_patient(samples: list[Sample]) -> dict[str, dict[str, list[Sample]]]:
-    by_label: dict[str, dict[str, list[Sample]]] = defaultdict(lambda: defaultdict(list))
-    patient_labels: dict[str, str] = {}
-    for sample in samples:
-        known_label = patient_labels.setdefault(sample.patient_id, sample.label)
-        if known_label != sample.label:
-            raise ValueError(f"Patient {sample.patient_id} has images labelled both ways")
-        by_label[sample.label][sample.patient_id].append(sample)
-    return by_label
+def _group_by_stratum_and_patient[T: PatientRow](
+    rows: list[T], stratum: Callable[[T], Hashable]
+) -> dict[Hashable, dict[str, list[T]]]:
+    groups: dict[Hashable, dict[str, list[T]]] = defaultdict(lambda: defaultdict(list))
+    patient_groups: dict[str, Hashable] = {}
+    for row in rows:
+        group = stratum(row)
+        known_group = patient_groups.setdefault(row.patient_id, group)
+        if known_group != group:
+            raise ValueError(
+                f"Patient {row.patient_id} has images in two groups: {known_group} and {group}"
+            )
+        groups[group][row.patient_id].append(row)
+    return groups

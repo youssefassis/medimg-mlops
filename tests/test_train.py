@@ -6,7 +6,7 @@ import torch
 from PIL import Image
 
 from mlops.config import TrainingConfig
-from mlops.data.batches import write_batches
+from mlops.data.batches import heldout_path, write_batches, write_rows
 from mlops.data.chest_xray import Sample
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.training.train import class_weights, train
@@ -37,8 +37,10 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
         data_dir, "train", "PNEUMONIA", 4
     )
     write_batches([batch], data_dir / "batches")
-    make_images(data_dir, "test", "NORMAL", 2)
-    make_images(data_dir, "test", "PNEUMONIA", 2)
+    test_set = make_images(data_dir, "test", "NORMAL", 2) + make_images(
+        data_dir, "test", "PNEUMONIA", 2
+    )
+    write_rows(heldout_path(data_dir), Sample, test_set)
     monkeypatch.chdir(tmp_path)  # MLflow stores artifacts under the working directory
     monkeypatch.setenv("MLFLOW_TRACKING_URI", f"sqlite:///{tmp_path}/mlflow.db")
     config = TrainingConfig(
@@ -61,5 +63,10 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
     assert run.data.params["n_test"] == "4"
     assert run.data.metrics["test_roc_auc"] == test_metrics["test_roc_auc"]
     assert {"train_loss", "val_roc_auc", "test_recall", "test_roc_auc"} <= run.data.metrics.keys()
+    datasets = {
+        dataset_input.tags[0].value: dataset_input.dataset.name
+        for dataset_input in run.inputs.dataset_inputs
+    }
+    assert datasets == {"training": "batch_1", "testing": "test"}
     model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
     assert model(torch.zeros(3, 3, 224, 224)).shape == (3, 2)
