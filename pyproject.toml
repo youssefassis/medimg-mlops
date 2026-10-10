@@ -48,3 +48,7 @@ torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[tool.ruff.lint.per-file-ignores]
+# marimo displays a cell's last expression, and markdown tables can't be wrapped.
+"notebooks/*" = ["B018", "E501"]
