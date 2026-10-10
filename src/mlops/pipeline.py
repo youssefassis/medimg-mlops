@@ -31,10 +31,11 @@ def validate(batch: int) -> None:
 
 
 def train(batch: int) -> str:
-    """Returns the MLflow run ID."""
+    """Returns the MLflow run ID. The decision threshold aims for the gate's minimum recall."""
     _setup_logging()
     config = _training_config(batch)
-    return train_model(config, ROOT / config.data_dir)
+    target_sensitivity = _promotion_config().min_recall
+    return train_model(config, ROOT / config.data_dir, target_sensitivity)
 
 
 def evaluate(run_id: str) -> dict[str, float]:
@@ -46,13 +47,16 @@ def evaluate(run_id: str) -> dict[str, float]:
 def promote(run_id: str) -> bool:
     """Returns whether the model went to production. A rejection is not an error."""
     _setup_logging()
-    config = load_config(ROOT / "config" / "promotion.yaml", PromotionConfig)
-    return promote_model(run_id, config)
+    return promote_model(run_id, _promotion_config())
 
 
 def _setup_logging() -> None:
     # Steps run in fresh processes (Airflow tasks), so each one sets up its own logging.
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+
+
+def _promotion_config() -> PromotionConfig:
+    return load_config(ROOT / "config" / "promotion.yaml", PromotionConfig)
 
 
 def _training_config(batch: int | None = None) -> TrainingConfig:

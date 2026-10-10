@@ -36,8 +36,12 @@ X-rays, with Airflow and MLflow running locally.
 6. Train a model: in Airflow, trigger `training_pipeline` and pick a batch (1–5). It validates
    the batch, trains on it, scores the model on the test set, and logs the run to MLflow, with
    the batch and the test set as its datasets.
-   The model is then registered as `pneumonia-classifier`, and gets the `production` alias
-   if it passes the gate in `config/promotion.yaml`.
+   Training picks the decision threshold on validation data: the highest one that still finds
+   `min_recall` of the opacities. The test set is scored at that threshold, with 95% confidence
+   intervals, and per view, sex, age group and pixel spacing (the table is in the run's
+   `validation/subgroups.json`). The model is then registered as `pneumonia-classifier`, and
+   gets the `production` alias if it passes the gate in `config/promotion.yaml`, overall and
+   for each view and sex.
    On CPU this takes several minutes.
 
    To run the same steps outside Airflow (about 2 minutes on a Mac GPU):

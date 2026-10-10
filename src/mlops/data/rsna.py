@@ -56,7 +56,12 @@ def by_label_and_view(row: ManifestRow) -> tuple[str, str]:
 
 
 def read_manifest(data_dir: Path) -> list[ManifestRow]:
-    with (data_dir / PROCESSED_DIR / "manifest.csv").open(newline="") as file:
+    return read_rows(data_dir / PROCESSED_DIR / "manifest.csv")
+
+
+def read_rows(path: Path) -> list[ManifestRow]:
+    """Reads the manifest, or a split of it such as the test set."""
+    with path.open(newline="") as file:
         return [
             ManifestRow(
                 **row | {"age": int(row["age"]), "pixel_spacing_mm": float(row["pixel_spacing_mm"])}

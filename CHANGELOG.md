@@ -5,6 +5,7 @@ Notable changes, one entry per step. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- Clinical validation: decision threshold chosen on validation, 95% confidence intervals, metrics per subgroup, and a gate on each view and sex (#28)
 - Train on RSNA: a held-out test set and batches split by patient, label and view; each run logs its datasets with a content hash (#27)
 - Ingest RSNA: header and pixel checks, de-identification, PNGs with a manifest (#26)
 - Notebook exploring the RSNA DICOM data: headers, labels, shortcuts, pixels and preprocessing (#25)

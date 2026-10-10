@@ -43,6 +43,20 @@ def test_model_clearly_worse_than_production_fails(name):
     ]
 
 
+def test_each_view_and_sex_must_meet_the_minimums():
+    candidate = GOOD | {
+        "recall_view_AP": 0.95,
+        "recall_view_PA": 0.85,
+        "specificity_sex_F": 0.65,
+        "recall_age_0-17": 0.10,  # age isn't gated: too few images per group
+    }
+
+    assert check_gate(candidate, None, CONFIG) == [
+        "recall for view PA 0.850 < 0.9",
+        "specificity for sex F 0.650 < 0.7",
+    ]
+
+
 def test_every_failed_rule_is_reported():
     candidate = {"recall": 0.5, "specificity": 0.5, "roc_auc": 0.5}
 

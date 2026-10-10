@@ -8,6 +8,7 @@ from PIL import Image
 from mlops.config import TrainingConfig
 from mlops.data.batches import heldout_path, write_batches, write_rows
 from mlops.data.chest_xray import Sample
+from mlops.data.rsna import ManifestRow
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.training.train import class_weights, train
 
@@ -40,7 +41,11 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
     test_set = make_images(data_dir, "test", "NORMAL", 2) + make_images(
         data_dir, "test", "PNEUMONIA", 2
     )
-    write_rows(heldout_path(data_dir), Sample, test_set)
+    test_rows = [
+        ManifestRow(str(sample.path), sample.label, sample.patient_id, "c", view, "F", 50, 0.1, "")
+        for sample, view in zip(test_set, ["AP", "PA", "AP", "PA"], strict=True)
+    ]
+    write_rows(heldout_path(data_dir), ManifestRow, test_rows)
     monkeypatch.chdir(tmp_path)  # MLflow stores artifacts under the working directory
     monkeypatch.setenv("MLFLOW_TRACKING_URI", f"sqlite:///{tmp_path}/mlflow.db")
     config = TrainingConfig(
@@ -55,7 +60,7 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
         experiment="test",
     )
 
-    run_id = train(config, data_dir, pretrained=False)
+    run_id = train(config, data_dir, target_sensitivity=0.9, pretrained=False)
     test_metrics = evaluate_run(run_id, data_dir, batch_size=4)
 
     run = mlflow.get_run(run_id)
@@ -63,6 +68,16 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
     assert run.data.params["n_test"] == "4"
     assert run.data.metrics["test_roc_auc"] == test_metrics["test_roc_auc"]
     assert {"train_loss", "val_roc_auc", "test_recall", "test_roc_auc"} <= run.data.metrics.keys()
+    assert {"test_recall_ci_low", "test_recall_view_AP", "test_specificity_sex_F"} <= (
+        run.data.metrics.keys()
+    )
+    assert 0 <= float(run.data.params["threshold"]) <= 1
+    table = mlflow.artifacts.load_dict(f"runs:/{run_id}/validation/subgroups.json")
+    assert table["threshold"] == float(run.data.params["threshold"])
+    assert {(row["subgroup"], row["group"]) for row in table["subgroups"]} >= {
+        ("view", "AP"),
+        ("view", "PA"),
+    }
     datasets = {
         dataset_input.tags[0].value: dataset_input.dataset.name
         for dataset_input in run.inputs.dataset_inputs

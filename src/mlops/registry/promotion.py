@@ -6,6 +6,7 @@ import mlflow
 from mlflow import MlflowClient
 
 from mlops.config import PromotionConfig
+from mlops.evaluation.subgroups import GATED_SUBGROUPS
 
 PRODUCTION_ALIAS = "production"
 
@@ -22,14 +23,16 @@ def check_gate(
 ) -> list[str]:
     """Returns why the candidate can't be promoted; an empty list means it passes.
 
-    Metrics are test metrics without their "test_" prefix. `production` is None when no model
-    is in production yet.
+    Metrics are test metrics without their "test_" prefix. Subgroup metrics such as
+    "recall_view_AP" must meet the same minimums. `production` is None when no model is in
+    production yet.
     """
     reasons = []
     if candidate["recall"] < config.min_recall:
         reasons.append(f"recall {candidate['recall']:.3f} < {config.min_recall}")
     if candidate["specificity"] < config.min_specificity:
         reasons.append(f"specificity {candidate['specificity']:.3f} < {config.min_specificity}")
+    reasons += _subgroup_reasons(candidate, config)
     if production is not None:
         for name in COMPARED_METRICS:
             if candidate[name] < production[name] - config.max_drop:
@@ -37,6 +40,21 @@ def check_gate(
                     f"{name} {candidate[name]:.3f} < production {production[name]:.3f}"
                     f" - {config.max_drop}"
                 )
+    return reasons
+
+
+def _subgroup_reasons(candidate: dict[str, float], config: PromotionConfig) -> list[str]:
+    reasons = []
+    for subgroup in GATED_SUBGROUPS:
+        for metric, minimum in (
+            ("recall", config.min_recall),
+            ("specificity", config.min_specificity),
+        ):
+            prefix = f"{metric}_{subgroup}_"
+            for name, value in sorted(candidate.items()):
+                if name.startswith(prefix) and value < minimum:
+                    group = name.removeprefix(prefix)
+                    reasons.append(f"{metric} for {subgroup} {group} {value:.3f} < {minimum}")
     return reasons
 
 
@@ -66,11 +84,16 @@ def promote(run_id: str, config: PromotionConfig) -> bool:
 
 
 def _test_metrics(client: MlflowClient, run_id: str) -> dict[str, float]:
+    """The run's test metrics without their prefix, including the subgroup ones."""
     metrics = client.get_run(run_id).data.metrics
     missing = [name for name in COMPARED_METRICS if f"test_{name}" not in metrics]
     if missing:
         raise ValueError(f"Run {run_id} has no test metrics {missing}: evaluate it first")
-    return {name: metrics[f"test_{name}"] for name in COMPARED_METRICS}
+    return {
+        name.removeprefix("test_"): value
+        for name, value in metrics.items()
+        if name.startswith("test_")
+    }
 
 
 def _production_metrics(client: MlflowClient, model_name: str) -> dict[str, float] | None:

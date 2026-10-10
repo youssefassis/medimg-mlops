@@ -1,5 +1,6 @@
 # Used by the promote step. A model gets the production alias only if it passes every rule,
-# using its metrics on test/.
+# using its metrics on the test set at the threshold chosen on validation. The minimums also
+# apply to each view (AP, PA) and sex. Training aims its threshold at min_recall.
 model_name: pneumonia-classifier
 min_recall: 0.90
 min_specificity: 0.80
