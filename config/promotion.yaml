@@ -4,5 +4,6 @@
 model_name: pneumonia-classifier
 min_recall: 0.90
 min_specificity: 0.80
-# Recall, specificity and ROC AUC may be at most this much below the production model's.
+# Recall, specificity and ROC AUC may be at most this much below the production model's,
+# if both were scored on the same test set. Otherwise only the minimums apply.
 max_drop: 0.01

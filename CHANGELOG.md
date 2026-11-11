@@ -20,6 +20,7 @@ Notable changes, one entry per step. The format follows [Keep a Changelog](https
 - Local stack with Docker Compose: Airflow, MLflow and Postgres (#10)
 
 ### Fixed
+- The gate compared models with a production model scored on another test set; now it only compares on the same one
 - The `evaluate` task failed: its `run_id` argument clashed with Airflow's own (#14)
 - Patients that also appear in the test set are left out of the training batches (#13)
 

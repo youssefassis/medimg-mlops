@@ -32,7 +32,11 @@ REPORT = {
     "threshold": 0.276,
     "decision": {"promoted": False, "reasons": ["recall 0.850 < 0.9"]},
     "metrics": metrics_with_intervals(recall=0.85),
-    "production": {"version": "1", "metrics": metrics_with_intervals(recall=0.95)},
+    "production": {
+        "version": "1",
+        "compared": True,
+        "metrics": metrics_with_intervals(recall=0.95),
+    },
 }
 
 
@@ -54,6 +58,15 @@ def test_summary_without_production_model():
     assert "| recall | 0.850 [0.800–0.900] | – |" in summary
 
 
+def test_summary_says_when_production_was_not_compared():
+    production = {"version": "1", "compared": False, "metrics": None}
+
+    summary = render_summary(REPORT | {"production": production})
+
+    assert "| recall | 0.850 [0.800–0.900] | – |" in summary
+    assert "Not compared with production: it was scored on another test set." in summary
+
+
 @pytest.fixture
 def mlflow_store(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)  # MLflow stores artifacts under the working directory
@@ -62,10 +75,12 @@ def mlflow_store(tmp_path, monkeypatch):
 
 def log_run(tmp_path, recall: float) -> str:
     """Logs what training and evaluation log: params, datasets, model and test metrics."""
-    (tmp_path / "batch_1.csv").write_text("path,label,patient_id\n")
+    for name in ("batch_1", "test"):
+        (tmp_path / f"{name}.csv").write_text("path,label,patient_id\n")
     with mlflow.start_run() as run:
         mlflow.log_params({"n_train": 8, "n_val": 2, "n_test": 4, "threshold": 0.3})
         log_dataset(tmp_path / "batch_1.csv", context="training")
+        log_dataset(tmp_path / "test.csv", context="testing")
         mlflow.pytorch.log_model(
             nn.Linear(2, 2), name="model", input_example=np.zeros((2, 2), dtype=np.float32)
         )
@@ -88,6 +103,7 @@ def test_report_records_the_decision_in_the_run_and_the_registry(mlflow_store, t
     assert report["images"] == {"train": 8, "val": 2, "test": 4}
     assert report["decision"]["promoted"] is False
     assert report["production"]["version"] == "1"
+    assert report["production"]["compared"] is True
     assert report["production"]["metrics"]["recall"] == 0.95
     description = MlflowClient().get_model_version("test-model", "2").description
     assert description.startswith("**Rejected**:\n- recall 0.850 < 0.9")
