@@ -1,9 +1,9 @@
-"""The classifier: ResNet18 with one output per label (NORMAL, PNEUMONIA)."""
+"""The classifier: ResNet18 with one output per label (see mlops.data.samples.LABELS)."""
 
 from torch import nn
 from torchvision.models import ResNet18_Weights, resnet18
 
-from mlops.data.chest_xray import LABELS
+from mlops.data.samples import LABELS
 
 
 def build_model(pretrained: bool = True) -> nn.Module:

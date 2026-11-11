@@ -7,11 +7,11 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-from mlops.data.chest_xray import LABELS, Sample
+from mlops.data.samples import LABELS, Sample
 
 
 class ChestXrayDataset(Dataset):
-    """Returns (image tensor, label index), with NORMAL = 0 and PNEUMONIA = 1."""
+    """Returns (image tensor, label index), with the index of the label in LABELS."""
 
     def __init__(
         self,

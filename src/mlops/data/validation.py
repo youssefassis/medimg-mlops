@@ -4,7 +4,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from mlops.data.chest_xray import LABELS, Sample
+from mlops.data.samples import LABELS, Sample
 
 MAX_PROBLEMS_SHOWN = 20
 

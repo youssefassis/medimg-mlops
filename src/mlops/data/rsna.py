@@ -16,10 +16,10 @@ from PIL import Image
 
 from mlops.config import IngestionConfig
 from mlops.data.batches import write_rows
-from mlops.data.chest_xray import LABELS
 from mlops.data.deidentify import pseudonymize
 from mlops.data.dicom import to_uint8
 from mlops.data.dicom_checks import header_problems, image_problems, parse_age
+from mlops.data.samples import NEGATIVE, POSITIVE
 
 RAW_DIR = Path("raw") / "rsna"
 PROCESSED_DIR = Path("processed") / "rsna"
@@ -71,9 +71,8 @@ def read_rows(path: Path) -> list[ManifestRow]:
 
 
 def to_label(rsna_class: str) -> str:
-    """Lung Opacity is PNEUMONIA. Normal and No Lung Opacity / Not Normal are both NORMAL."""
-    normal, pneumonia = LABELS
-    return pneumonia if rsna_class == POSITIVE_CLASS else normal
+    """Lung Opacity is positive. Normal and No Lung Opacity / Not Normal are both negative."""
+    return POSITIVE if rsna_class == POSITIVE_CLASS else NEGATIVE
 
 
 def read_classes(data_dir: Path) -> dict[str, str]:

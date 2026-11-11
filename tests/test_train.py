@@ -7,21 +7,22 @@ from PIL import Image
 
 from mlops.config import TrainingConfig
 from mlops.data.batches import heldout_path, write_batches, write_rows
-from mlops.data.chest_xray import Sample
 from mlops.data.rsna import ManifestRow
+from mlops.data.samples import Sample
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.training.train import class_weights, train
 
 
 def make_images(data_dir: Path, split: str, label: str, n: int) -> list[Sample]:
-    folder = data_dir / "raw" / "chest_xray" / split / label
+    folder = data_dir / "images" / split
     folder.mkdir(parents=True, exist_ok=True)
     samples = []
     for i in range(n):
-        patient_id = f"IM-{i:04d}" if label == "NORMAL" else f"person{i}"
-        name = f"{patient_id}-0001.jpeg" if label == "NORMAL" else f"{patient_id}_virus_1.jpeg"
-        Image.new("L", (32, 32), color=0 if label == "NORMAL" else 255).save(folder / name)
-        samples.append(Sample((folder / name).relative_to(data_dir), label, patient_id))
+        patient_id = f"{label}-{i}"
+        Image.new("L", (32, 32), color=0 if label == "NORMAL" else 255).save(
+            folder / f"{patient_id}.png"
+        )
+        samples.append(Sample(Path("images") / split / f"{patient_id}.png", label, patient_id))
     return samples
 
 
