@@ -5,6 +5,7 @@ Notable changes, one entry per step. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- Retrain on every batch released so far, each time a batch is released (#16)
 - Prediction API with `mlflow models serve`: send DICOM files, get predictions from the production model (#15)
 - Clinical validation: decision threshold chosen on validation, 95% confidence intervals, metrics per subgroup, and a gate on each view and sex (#28)
 - Train on RSNA: a held-out test set and batches split by patient, label and view; each run logs its datasets with a content hash (#27)
