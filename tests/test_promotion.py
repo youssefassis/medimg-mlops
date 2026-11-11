@@ -92,7 +92,7 @@ def production_run_id() -> str:
 def test_first_good_model_goes_to_production(mlflow_store):
     run_id = log_run(GOOD)
 
-    assert promote(run_id, CONFIG) is True
+    assert promote(run_id, CONFIG).promoted is True
     assert production_run_id() == run_id
     assert version_tags(run_id)["promotion"] == "passed"
 
@@ -102,7 +102,12 @@ def test_worse_model_is_registered_but_not_promoted(mlflow_store):
     promote(good_run, CONFIG)
     worse_run = log_run(GOOD | {"roc_auc": 0.90})
 
-    assert promote(worse_run, CONFIG) is False
+    decision = promote(worse_run, CONFIG)
+
+    assert decision.promoted is False
+    assert decision.reasons == ["roc_auc 0.900 < production 0.950 - 0.01"]
+    assert decision.production_version == "1"
+    assert decision.production_metrics["roc_auc"] == 0.95
     assert production_run_id() == good_run
     assert version_tags(worse_run) == {
         "promotion": "rejected",
