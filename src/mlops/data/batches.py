@@ -1,7 +1,7 @@
 """Splits samples by patient: a held-out test set, then batches that simulate data arriving
 over time.
 
-The splits work on any rows with a label and a patient_id: Samples, or the RSNA manifest rows.
+The splits work on any rows with a label and a patient_id: Samples, or the manifest rows.
 """
 
 import csv
@@ -12,7 +12,7 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Protocol
 
-from mlops.data.chest_xray import Sample
+from mlops.data.samples import Sample
 
 
 class PatientRow(Protocol):

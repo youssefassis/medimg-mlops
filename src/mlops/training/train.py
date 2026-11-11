@@ -15,9 +15,9 @@ from torch.utils.data import DataLoader
 
 from mlops.config import TrainingConfig
 from mlops.data.batches import batch_paths, read_batches, split_off_patients
-from mlops.data.chest_xray import LABELS, Sample
 from mlops.data.dataset import ChestXrayDataset
 from mlops.data.lineage import log_dataset
+from mlops.data.samples import LABELS, Sample
 from mlops.data.transforms import IMAGE_SIZE, build_transform
 from mlops.evaluation.evaluate import evaluate_model, predict, with_prefix
 from mlops.evaluation.metrics import choose_threshold

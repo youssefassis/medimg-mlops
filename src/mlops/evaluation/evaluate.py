@@ -11,10 +11,10 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from mlops.data.batches import heldout_path
-from mlops.data.chest_xray import LABELS, Sample
 from mlops.data.dataset import ChestXrayDataset
 from mlops.data.lineage import log_dataset
 from mlops.data.rsna import read_rows
+from mlops.data.samples import LABELS, POSITIVE, Sample
 from mlops.data.transforms import build_transform
 from mlops.evaluation.metrics import bootstrap_intervals, compute_metrics
 from mlops.evaluation.subgroups import SubgroupResult, subgroup_results
@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 
 @torch.no_grad()
 def predict(model: nn.Module, loader: DataLoader, device: torch.device) -> tuple[list, list]:
-    """Returns (labels, pneumonia probabilities). The model must already be in eval mode
+    """Returns (labels, probabilities of the positive class). The model must already be in eval mode
     (models loaded from MLflow always are)."""
     labels: list[int] = []
     scores: list[float] = []
     for images, batch_labels in loader:
         probabilities = torch.softmax(model(images.to(device)), dim=1)
-        scores += probabilities[:, LABELS.index("PNEUMONIA")].tolist()
+        scores += probabilities[:, LABELS.index(POSITIVE)].tolist()
         labels += batch_labels.tolist()
     return labels, scores
 

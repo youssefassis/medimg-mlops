@@ -4,8 +4,8 @@ import pytest
 import torch
 from PIL import Image
 
-from mlops.data.chest_xray import Sample
 from mlops.data.dataset import ChestXrayDataset
+from mlops.data.samples import Sample
 from mlops.data.transforms import build_transform
 
 

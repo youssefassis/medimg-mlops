@@ -1,4 +1,4 @@
-"""Classification metrics, with PNEUMONIA (label 1) as the positive class."""
+"""Classification metrics, with the positive class as label 1."""
 
 import math
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ INTERVAL_METRICS = ("recall", "specificity", "roc_auc")
 def compute_metrics(
     labels: Sequence[int], scores: Sequence[float], threshold: float = 0.5
 ) -> dict[str, float]:
-    """`scores` are the predicted probabilities of pneumonia."""
+    """`scores` are the predicted probabilities of the positive class."""
     predictions = [int(score >= threshold) for score in scores]
     return {
         "recall": recall_score(labels, predictions, pos_label=1, zero_division=0),

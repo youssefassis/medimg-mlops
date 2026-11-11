@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from mlops.data.chest_xray import Sample
+from mlops.data.samples import Sample
 from mlops.data.validation import validate_batch
 
 

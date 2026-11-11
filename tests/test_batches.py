@@ -13,7 +13,7 @@ from mlops.data.batches import (
     write_batches,
     write_rows,
 )
-from mlops.data.chest_xray import Sample
+from mlops.data.samples import Sample
 
 
 @dataclass(frozen=True)

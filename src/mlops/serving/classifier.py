@@ -15,9 +15,9 @@ from PIL import Image
 from pydantic import BaseModel
 from pydicom.errors import InvalidDicomError
 
-from mlops.data.chest_xray import LABELS
 from mlops.data.dicom import to_uint8
 from mlops.data.dicom_checks import header_problems
+from mlops.data.samples import LABELS, POSITIVE
 from mlops.data.transforms import build_transform
 
 
@@ -56,7 +56,7 @@ class PneumoniaClassifier(mlflow.pyfunc.PythonModel):
 
         tensor = build_transform()(Image.fromarray(to_uint8(dataset))).unsqueeze(0)
         probabilities = torch.softmax(self.network(tensor), dim=1)
-        score = probabilities[0, LABELS.index("PNEUMONIA")].item()
+        score = probabilities[0, LABELS.index(POSITIVE)].item()
         return Prediction(pneumonia=score >= self.threshold, score=score)
 
 
