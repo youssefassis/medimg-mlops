@@ -105,6 +105,15 @@ def batch_path(data_dir: Path, number: int) -> Path:
     return data_dir / "batches" / f"batch_{number}.csv"
 
 
+def batch_paths(data_dir: Path, last: int) -> list[Path]:
+    """Batches 1 to `last`: all the data released so far, when `last` is the newest batch."""
+    return [batch_path(data_dir, number) for number in range(1, last + 1)]
+
+
+def read_batches(data_dir: Path, last: int) -> list[Sample]:
+    return [sample for path in batch_paths(data_dir, last) for sample in read_batch(path)]
+
+
 def heldout_path(data_dir: Path) -> Path:
     """The held-out test set: never trained on, used to score every model."""
     return data_dir / "batches" / "test.csv"

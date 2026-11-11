@@ -1,4 +1,5 @@
-"""Runs the training pipeline outside Airflow, on the batch set in config/training.yaml."""
+"""Runs the training pipeline outside Airflow, on batches 1 to the one set in
+config/training.yaml."""
 
 import os
 from pathlib import Path

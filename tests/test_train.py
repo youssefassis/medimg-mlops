@@ -34,10 +34,9 @@ def test_class_weights_balance_the_classes():
 
 def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
     data_dir = tmp_path / "data"
-    batch = make_images(data_dir, "train", "NORMAL", 4) + make_images(
-        data_dir, "train", "PNEUMONIA", 4
-    )
-    write_batches([batch], data_dir / "batches")
+    normal = make_images(data_dir, "train", "NORMAL", 4)
+    pneumonia = make_images(data_dir, "train", "PNEUMONIA", 4)
+    write_batches([normal[:2] + pneumonia[:2], normal[2:] + pneumonia[2:]], data_dir / "batches")
     test_set = make_images(data_dir, "test", "NORMAL", 2) + make_images(
         data_dir, "test", "PNEUMONIA", 2
     )
@@ -50,7 +49,7 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
     monkeypatch.setenv("MLFLOW_TRACKING_URI", f"sqlite:///{tmp_path}/mlflow.db")
     config = TrainingConfig(
         data_dir="data",
-        batch=1,
+        batch=2,
         val_fraction=0.5,
         epochs=1,
         batch_size=4,
@@ -78,10 +77,10 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
         ("view", "AP"),
         ("view", "PA"),
     }
-    datasets = {
-        dataset_input.tags[0].value: dataset_input.dataset.name
+    datasets = sorted(
+        (dataset_input.tags[0].value, dataset_input.dataset.name)
         for dataset_input in run.inputs.dataset_inputs
-    }
-    assert datasets == {"training": "batch_1", "testing": "test"}
+    )
+    assert datasets == [("testing", "test"), ("training", "batch_1"), ("training", "batch_2")]
     network = mlflow.pyfunc.load_model(f"runs:/{run_id}/model").unwrap_python_model().network
     assert network(torch.zeros(3, 3, 224, 224)).shape == (3, 2)
