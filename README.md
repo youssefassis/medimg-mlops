@@ -32,7 +32,8 @@ X-rays, with Airflow and MLflow running locally.
    ```bash
    docker compose up -d --build
    ```
-5. Open Airflow at http://localhost:8080 and MLflow at http://localhost:5001.
+5. Open Airflow at http://localhost:8080 and MLflow at http://localhost:5001. The prediction API
+   is at http://localhost:8000.
 6. Train a model: in Airflow, trigger `training_pipeline` and pick a batch (1–5). It validates
    the batch, trains on it, scores the model on the test set, and logs the run to MLflow, with
    the batch and the test set as its datasets.
@@ -49,6 +50,17 @@ X-rays, with Airflow and MLflow running locally.
    uv run python scripts/train.py
    ```
    Settings are in `config/training.yaml`.
+7. Get a prediction from the production model by sending it DICOM files, base64-encoded:
+   ```bash
+   FILE=data/raw/rsna/stage_2_test_images/0000a175-0e68-4ca4-b1af-167204a7e0bc.dcm
+   curl -H "Content-Type: application/json" -d "{\"inputs\": [\"$(base64 -i $FILE)\"]}" \
+     localhost:8000/invocations
+   ```
+   It returns one prediction per file, such as
+   `{"pneumonia": false, "score": 0.03, "problems": []}`: the score is the probability of
+   pneumonia, compared with the model's threshold. A file that fails the ingestion header checks
+   gets no prediction, only its `problems`. The API is `mlflow models serve`; it starts once a
+   model is in production. After promoting a new one, run `docker compose restart serving`.
 
 Stop everything with `docker compose down`.
 
