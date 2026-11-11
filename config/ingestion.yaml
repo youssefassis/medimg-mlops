@@ -1,6 +1,7 @@
-# Used by scripts/ingest_rsna.py. data_dir is relative to the project root.
+# Used by scripts/ingest.py. data_dir is relative to the project root.
 data_dir: data
-sample_size: 3000 # of 26,684 training images; about 2.5 minutes and 1.2 GB
+source: rsna # one of mlops.data.sources.SOURCES
+sample_size: 3000 # RSNA has 26,684 labelled images; 3000 take about 2.5 minutes and 1.2 GB
 seed: 42
 max_age: 120
 # The quality limits sit beyond the worst usable images seen in notebooks/explore_rsna.py:

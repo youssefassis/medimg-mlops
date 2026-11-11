@@ -3,7 +3,7 @@ import re
 
 import pytest
 
-from mlops.data.rsna import ManifestRow
+from mlops.data.ingestion import ManifestRow
 from mlops.evaluation.subgroups import age_group, subgroup_results
 
 

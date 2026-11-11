@@ -12,8 +12,8 @@ from torch.utils.data import DataLoader
 
 from mlops.data.batches import heldout_path
 from mlops.data.dataset import ChestXrayDataset
+from mlops.data.ingestion import read_rows
 from mlops.data.lineage import log_dataset
-from mlops.data.rsna import read_rows
 from mlops.data.samples import LABELS, POSITIVE, Sample
 from mlops.data.transforms import build_transform
 from mlops.evaluation.metrics import bootstrap_intervals, compute_metrics

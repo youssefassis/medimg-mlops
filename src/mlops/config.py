@@ -30,7 +30,8 @@ class TrainingConfig:
 @dataclass(frozen=True)
 class IngestionConfig:
     data_dir: str  # relative to the project root
-    sample_size: int  # how many RSNA training images to ingest; all of them if larger
+    source: str  # which dataset to ingest, see mlops.data.sources
+    sample_size: int  # how many images to ingest; all of them if larger
     seed: int
     max_age: int  # older patients are data entry errors
     min_contrast: float  # lowest standard deviation of the pixels, on 0–255
