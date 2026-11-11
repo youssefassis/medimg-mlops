@@ -1,4 +1,4 @@
-# The Airflow image only needs these. Keeps data/ (over 1 GB) out of the build.
+# The Airflow and serving images only need these. Keeps data/ (over 1 GB) out of the build.
 *
 !pyproject.toml
 !uv.lock
