@@ -60,7 +60,7 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
         experiment="test",
     )
 
-    run_id = train(config, data_dir, target_sensitivity=0.9, pretrained=False)
+    run_id = train(config, data_dir, target_sensitivity=0.9, max_age=120, pretrained=False)
     test_metrics = evaluate_run(run_id, data_dir, batch_size=4)
 
     run = mlflow.get_run(run_id)
@@ -83,5 +83,5 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
         for dataset_input in run.inputs.dataset_inputs
     }
     assert datasets == {"training": "batch_1", "testing": "test"}
-    model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
-    assert model(torch.zeros(3, 3, 224, 224)).shape == (3, 2)
+    network = mlflow.pyfunc.load_model(f"runs:/{run_id}/model").unwrap_python_model().network
+    assert network(torch.zeros(3, 3, 224, 224)).shape == (3, 2)

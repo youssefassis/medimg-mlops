@@ -47,7 +47,7 @@ def evaluate_run(run_id: str, data_dir: Path, batch_size: int = 32) -> dict[str,
     dataset input.
     """
     threshold = float(mlflow.get_run(run_id).data.params["threshold"])
-    model = mlflow.pytorch.load_model(f"runs:/{run_id}/model")
+    model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model").unwrap_python_model().network
     rows = read_rows(heldout_path(data_dir))
     samples = [Sample(Path(row.path), row.label, row.patient_id) for row in rows]
     loader = DataLoader(ChestXrayDataset(samples, data_dir, build_transform()), batch_size)

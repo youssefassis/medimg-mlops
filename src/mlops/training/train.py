@@ -2,6 +2,7 @@
 
 import copy
 import logging
+import tempfile
 import time
 from collections import Counter
 from dataclasses import asdict
@@ -22,17 +23,25 @@ from mlops.evaluation.evaluate import evaluate_model, predict, with_prefix
 from mlops.evaluation.metrics import choose_threshold
 from mlops.training.model import build_model
 
+# Logged as code, not imported: the file registers itself as the model when MLflow loads it.
+CLASSIFIER_PATH = Path(__file__).parents[1] / "serving" / "classifier.py"
+
 logger = logging.getLogger(__name__)
 
 
 def train(
-    config: TrainingConfig, data_dir: Path, target_sensitivity: float, pretrained: bool = True
+    config: TrainingConfig,
+    data_dir: Path,
+    target_sensitivity: float,
+    max_age: int,
+    pretrained: bool = True,
 ) -> str:
     """Trains on batch number `config.batch` and returns the MLflow run ID.
 
     Keeps the epoch with the best validation ROC AUC, then logs as `threshold` the highest
-    decision threshold that reaches `target_sensitivity` on validation. Scoring on the test set
-    is done separately, by `mlops.evaluation.evaluate.evaluate_run`.
+    decision threshold that reaches `target_sensitivity` on validation. The logged model serves
+    DICOM files, rejecting those that fail the ingestion header checks (`max_age` included).
+    Scoring on the test set is done separately, by `mlops.evaluation.evaluate.evaluate_run`.
     """
     torch.manual_seed(config.seed)
     device = pick_device(config.device)
@@ -100,7 +109,7 @@ def train(
             "best epoch %d, val_roc_auc %.4f, threshold %.3f", best_epoch, best_auc, threshold
         )
 
-        log_model(model.cpu())
+        log_model(model.cpu(), threshold, max_age)
         return run.info.run_id
 
 
@@ -151,10 +160,20 @@ def train_one_epoch(
     return total_loss / len(loader.dataset)
 
 
-def log_model(model: nn.Module) -> None:
-    """Logs the model in MLflow's pt2 format, which is traced from an example input.
+def log_model(network: nn.Module, threshold: float, max_age: int) -> None:
+    """Logs the servable model: the classifier in mlops/serving/classifier.py, with the network
+    in MLflow's pt2 format as its artifact.
 
-    The example has 2 images: tracing with 1 would fix the batch size to 1.
+    The pt2 format is traced from an example input of 2 images: tracing with 1 would fix the
+    batch size to 1.
     """
     example = torch.zeros(2, 3, IMAGE_SIZE, IMAGE_SIZE)
-    mlflow.pytorch.log_model(model.eval(), name="model", input_example=example.numpy())
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        network_dir = Path(tmp_dir) / "network"
+        mlflow.pytorch.save_model(network.eval(), network_dir, input_example=example.numpy())
+        mlflow.pyfunc.log_model(
+            name="model",
+            python_model=str(CLASSIFIER_PATH),
+            artifacts={"network": str(network_dir)},
+            model_config={"threshold": threshold, "max_age": max_age},
+        )
