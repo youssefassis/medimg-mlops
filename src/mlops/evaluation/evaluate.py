@@ -11,7 +11,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from mlops.data.batches import heldout_path
-from mlops.data.dataset import ChestXrayDataset
+from mlops.data.dataset import ImageDataset
 from mlops.data.ingestion import read_rows
 from mlops.data.lineage import log_dataset
 from mlops.data.samples import LABELS, POSITIVE, Sample
@@ -50,7 +50,7 @@ def evaluate_run(run_id: str, data_dir: Path, batch_size: int = 32) -> dict[str,
     model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model").unwrap_python_model().network
     rows = read_rows(heldout_path(data_dir))
     samples = [Sample(Path(row.path), row.label, row.patient_id) for row in rows]
-    loader = DataLoader(ChestXrayDataset(samples, data_dir, build_transform()), batch_size)
+    loader = DataLoader(ImageDataset(samples, data_dir, build_transform()), batch_size)
     labels, scores = predict(model, loader, torch.device("cpu"))
 
     intervals = bootstrap_intervals(labels, scores, threshold)

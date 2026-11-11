@@ -19,7 +19,7 @@ from mlops.config import IngestionConfig
 from mlops.data.batches import write_rows
 from mlops.data.deidentify import pseudonymize
 from mlops.data.dicom import to_uint8
-from mlops.data.dicom_checks import header_problems, image_problems, parse_age
+from mlops.data.dicom_checks import HeaderChecks, header_problems, image_problems, parse_age
 
 PROCESSED_DIR = Path("processed")
 # HIPAA Safe Harbor: ages above 89 are reported as one group, 90.
@@ -60,6 +60,11 @@ def by_label_and_view(row: ManifestRow) -> tuple[str, str]:
     return row.label, row.view
 
 
+def header_checks(config: IngestionConfig) -> HeaderChecks:
+    """The header checks of ingestion, which serving applies too."""
+    return HeaderChecks(config.modalities, config.views, config.max_age)
+
+
 def read_manifest(data_dir: Path) -> list[ManifestRow]:
     return read_rows(data_dir / PROCESSED_DIR / "manifest.csv")
 
@@ -91,7 +96,7 @@ def ingest_file(
     source_sha256 = hashlib.sha256(content).hexdigest()
     dataset = pydicom.dcmread(io.BytesIO(content))
 
-    if problems := header_problems(dataset, config.max_age):
+    if problems := header_problems(dataset, header_checks(config)):
         return Rejection(source_sha256, "; ".join(problems))
     image = to_uint8(dataset)
     if problems := image_problems(image, config.min_contrast, config.max_near_black):

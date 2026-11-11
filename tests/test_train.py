@@ -33,7 +33,7 @@ def test_class_weights_balance_the_classes():
     assert class_weights(samples).tolist() == pytest.approx([2.0, 2 / 3])
 
 
-def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
+def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch, header_checks):
     data_dir = tmp_path / "data"
     normal = make_images(data_dir, "train", "NORMAL", 4)
     pneumonia = make_images(data_dir, "train", "PNEUMONIA", 4)
@@ -60,7 +60,9 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch):
         experiment="test",
     )
 
-    run_id = train(config, data_dir, target_sensitivity=0.9, max_age=120, pretrained=False)
+    run_id = train(
+        config, data_dir, target_sensitivity=0.9, header_checks=header_checks, pretrained=False
+    )
     test_metrics = evaluate_run(run_id, data_dir, batch_size=4)
 
     run = mlflow.get_run(run_id)

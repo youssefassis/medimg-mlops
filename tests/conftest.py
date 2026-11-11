@@ -3,6 +3,8 @@ import pytest
 from pydicom import Dataset
 from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
+from mlops.data.dicom_checks import HeaderChecks
+
 
 @pytest.fixture
 def make_dicom():
@@ -31,6 +33,12 @@ def chest_tags():
         "PatientAge": "51",
         "PixelSpacing": [0.143, 0.143],
     }
+
+
+@pytest.fixture
+def header_checks():
+    """Header checks that accept chest_tags."""
+    return HeaderChecks(modalities=["CR", "DX"], views=["AP", "PA"], max_age=120)
 
 
 @pytest.fixture

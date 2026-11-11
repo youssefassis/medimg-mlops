@@ -17,6 +17,7 @@ RUN uv sync --frozen --no-dev --no-install-project --no-cache
 COPY --chown=serving src ./src
 RUN uv sync --frozen --no-dev --no-cache
 
+# MODEL_NAME is the registered model, model_name in config/promotion.yaml.
 EXPOSE 8000
-CMD ["mlflow", "models", "serve", "--model-uri", "models:/pneumonia-classifier@production", \
-     "--env-manager", "local", "--host", "0.0.0.0", "--port", "8000"]
+CMD mlflow models serve --model-uri "models:/${MODEL_NAME}@production" \
+    --env-manager local --host 0.0.0.0 --port 8000

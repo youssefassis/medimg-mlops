@@ -19,6 +19,10 @@ Notable changes, one entry per step. The format follows [Keep a Changelog](https
 - Split the training data into patient-level batches (#11)
 - Local stack with Docker Compose: Airflow, MLflow and Postgres (#10)
 
+### Changed
+- Works with any labelled DICOM X-ray dataset: a source lists the files, and the class names, accepted modalities and views are set in config
+- Prediction API answers with `label` and `positive` instead of `pneumonia`
+
 ### Fixed
 - The gate compared models with a production model scored on another test set; now it only compares on the same one
 - The `evaluate` task failed: its `run_id` argument clashed with Airflow's own (#14)

@@ -1,0 +1,4 @@
+# What the model predicts: each image is negative or positive. A source (see
+# mlops.data.sources) maps its own classes to these two.
+negative: NORMAL
+positive: PNEUMONIA

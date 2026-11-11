@@ -3,6 +3,8 @@ data_dir: data
 source: rsna # one of mlops.data.sources.SOURCES
 sample_size: 3000 # RSNA has 26,684 labelled images; 3000 take about 2.5 minutes and 1.2 GB
 seed: 42
+modalities: [CR, DX] # computed and digital radiography
+views: [AP, PA]
 max_age: 120
 # The quality limits sit beyond the worst usable images seen in notebooks/explore_rsna.py:
 # contrast down to 27, and up to 56% near-black pixels for a chest framed by black borders.

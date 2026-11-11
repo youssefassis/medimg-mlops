@@ -6,6 +6,7 @@ from mlops.config import (
     BatchesConfig,
     IngestionConfig,
     PromotionConfig,
+    TaskConfig,
     TrainingConfig,
     load_config,
 )
@@ -44,6 +45,7 @@ def test_load_config_fails_on_missing_or_unknown_key(tmp_path, content, error):
         ("training.yaml", TrainingConfig),
         ("promotion.yaml", PromotionConfig),
         ("ingestion.yaml", IngestionConfig),
+        ("task.yaml", TaskConfig),
     ],
 )
 def test_project_configs_load(file_name, config_class):
