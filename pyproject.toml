@@ -39,16 +39,6 @@ testpaths = ["tests"]
 requires = ["uv_build>=0.11.15,<0.12"]
 build-backend = "uv_build"
 
-# On Linux (CI, Docker), install the CPU-only PyTorch builds instead of the CUDA ones.
-[tool.uv.sources]
-torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
-torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
 [tool.ruff.lint.per-file-ignores]
 # marimo displays a cell's last expression, and markdown tables can't be wrapped.
 "notebooks/*" = ["B018", "E501"]

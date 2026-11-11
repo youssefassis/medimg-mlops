@@ -10,7 +10,7 @@ from mlops.data.batches import heldout_path, write_batches, write_rows
 from mlops.data.ingestion import ManifestRow
 from mlops.data.samples import Sample
 from mlops.evaluation.evaluate import evaluate_run
-from mlops.training.train import class_weights, train
+from mlops.training.train import class_weights, pick_device, train
 
 
 def make_images(data_dir: Path, split: str, label: str, n: int) -> list[Sample]:
@@ -31,6 +31,13 @@ def test_class_weights_balance_the_classes():
     samples.append(Sample(Path("n.jpeg"), "NORMAL", "n"))
 
     assert class_weights(samples).tolist() == pytest.approx([2.0, 2 / 3])
+
+
+def test_missing_gpu_fails_at_once(monkeypatch):
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+
+    with pytest.raises(RuntimeError, match="no CUDA GPU is found"):
+        pick_device("cuda")
 
 
 def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch, header_checks):
@@ -63,7 +70,7 @@ def test_train_then_evaluate_log_to_mlflow(tmp_path, monkeypatch, header_checks)
     run_id = train(
         config, data_dir, target_sensitivity=0.9, header_checks=header_checks, pretrained=False
     )
-    test_metrics = evaluate_run(run_id, data_dir, batch_size=4)
+    test_metrics = evaluate_run(run_id, data_dir, torch.device("cpu"), batch_size=4)
 
     run = mlflow.get_run(run_id)
     assert run.data.params["n_train"] == "4"

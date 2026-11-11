@@ -39,7 +39,9 @@ def evaluate_model(model: nn.Module, loader: DataLoader, device: torch.device) -
     return compute_metrics(*predict(model, loader, device))
 
 
-def evaluate_run(run_id: str, data_dir: Path, batch_size: int = 32) -> dict[str, float]:
+def evaluate_run(
+    run_id: str, data_dir: Path, device: torch.device, batch_size: int = 32
+) -> dict[str, float]:
     """Scores the run's model on the held-out test set, at the threshold chosen in training.
 
     Logs to the same run: test metrics with 95% confidence intervals, recall and specificity
@@ -48,10 +50,11 @@ def evaluate_run(run_id: str, data_dir: Path, batch_size: int = 32) -> dict[str,
     """
     threshold = float(mlflow.get_run(run_id).data.params["threshold"])
     model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model").unwrap_python_model().network
+    model = model.to(device)
     rows = read_rows(heldout_path(data_dir))
     samples = [Sample(Path(row.path), row.label, row.patient_id) for row in rows]
     loader = DataLoader(ImageDataset(samples, data_dir, build_transform()), batch_size)
-    labels, scores = predict(model, loader, torch.device("cpu"))
+    labels, scores = predict(model, loader, device)
 
     intervals = bootstrap_intervals(labels, scores, threshold)
     subgroups = subgroup_results(rows, labels, scores, threshold)

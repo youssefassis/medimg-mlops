@@ -58,7 +58,7 @@ services:
     volumes:
       - mlflow-artifacts:/mlartifacts
     ports:
-      - "5001:5000"  # host port 5000 is taken by macOS AirPlay Receiver
+      - "5001:5000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 10s

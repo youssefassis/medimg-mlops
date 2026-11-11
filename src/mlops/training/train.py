@@ -116,13 +116,11 @@ def train(
 
 
 def pick_device(name: str) -> torch.device:
-    if name != "auto":
-        return torch.device(name)
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
-    return torch.device("cpu")
+    """Fails at once when the configured GPU is missing, rather than training on CPU."""
+    device = torch.device(name)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(f"device is {name!r} in config/training.yaml, but no CUDA GPU is found")
+    return device
 
 
 def make_loader(
