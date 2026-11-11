@@ -68,6 +68,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Loads the production model at startup, so it keeps restarting until one is promoted.
+  # Restart it to pick up a newly promoted model.
+  serving:
+    build:
+      context: .
+      dockerfile: docker/serving.Dockerfile
+    image: mlops-serving:local
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: unless-stopped
+
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
