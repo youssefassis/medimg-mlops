@@ -1,4 +1,4 @@
-"""PyTorch dataset over chest X-ray samples."""
+"""PyTorch dataset over image samples."""
 
 from collections.abc import Callable
 from pathlib import Path
@@ -10,7 +10,7 @@ from torch.utils.data import Dataset
 from mlops.data.samples import LABELS, Sample
 
 
-class ChestXrayDataset(Dataset):
+class ImageDataset(Dataset):
     """Returns (image tensor, label index), with the index of the label in LABELS."""
 
     def __init__(

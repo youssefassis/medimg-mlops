@@ -7,6 +7,12 @@ import yaml
 
 
 @dataclass(frozen=True)
+class TaskConfig:
+    negative: str  # class names, e.g. NORMAL and PNEUMONIA
+    positive: str
+
+
+@dataclass(frozen=True)
 class BatchesConfig:
     data_dir: str  # relative to the project root
     test_fraction: float  # share of patients held out as the test set
@@ -33,6 +39,8 @@ class IngestionConfig:
     source: str  # which dataset to ingest, see mlops.data.sources
     sample_size: int  # how many images to ingest; all of them if larger
     seed: int
+    modalities: list[str]  # accepted DICOM modalities
+    views: list[str]  # accepted view positions
     max_age: int  # older patients are data entry errors
     min_contrast: float  # lowest standard deviation of the pixels, on 0–255
     max_near_black: float  # highest share of near-black pixels

@@ -1,7 +1,7 @@
 """Retrains whenever a batch is released.
 
 release_batch simulates new data arriving: it releases a batch by hand, as an event on the
-RSNA_BATCHES asset. Each event triggers training_pipeline, which validates the batches released
+BATCHES asset. Each event triggers training_pipeline, which validates the batches released
 so far, trains on them, scores the model on the test set, then decides whether to promote it.
 
 Training tasks run in the mlops venv of the Airflow image (see docker/airflow.Dockerfile) and
@@ -13,7 +13,7 @@ from datetime import timedelta
 from airflow.sdk import Asset, Param, dag, task
 
 MLOPS_PYTHON = "/opt/mlops/.venv/bin/python"
-RSNA_BATCHES = Asset("rsna_batches")
+BATCHES = Asset("batches")
 
 
 @dag(
@@ -22,15 +22,15 @@ RSNA_BATCHES = Asset("rsna_batches")
     tags=["data"],
 )
 def release_batch():
-    @task(outlets=[RSNA_BATCHES])
+    @task(outlets=[BATCHES])
     def release(*, params, outlet_events) -> None:
-        outlet_events[RSNA_BATCHES].extra = {"batch": params["batch"]}
+        outlet_events[BATCHES].extra = {"batch": params["batch"]}
 
     release()
 
 
 @dag(
-    schedule=[RSNA_BATCHES],
+    schedule=[BATCHES],
     max_active_runs=1,  # batches released in a row train one after the other
     default_args={"retries": 2, "retry_delay": timedelta(minutes=1)},
     tags=["training"],
@@ -40,7 +40,7 @@ def training_pipeline():
     def newest_batch(*, triggering_asset_events) -> int:
         """Releases made while a run was waiting can trigger one run together: the newest one
         covers them all, as training uses every batch up to it."""
-        return max(event.extra["batch"] for event in triggering_asset_events[RSNA_BATCHES])
+        return max(event.extra["batch"] for event in triggering_asset_events[BATCHES])
 
     @task.external_python(python=MLOPS_PYTHON, expect_airflow=False)
     def validate(batch: int) -> None:

@@ -18,32 +18,34 @@ def test_parse_age_fails_on_invalid_value(value):
         parse_age(value)
 
 
-def test_valid_header_has_no_problems(make_dicom, noise, chest_tags):
-    assert header_problems(make_dicom(noise, **chest_tags), max_age=120) == []
+def test_valid_header_has_no_problems(make_dicom, noise, chest_tags, header_checks):
+    assert header_problems(make_dicom(noise, **chest_tags), header_checks) == []
 
 
 @pytest.mark.parametrize(
     ("tags", "problem"),
     [
-        ({"Modality": "CT"}, "modality 'CT'"),
-        ({"ViewPosition": "LL"}, "unknown view 'LL'"),
+        ({"Modality": "CT"}, "modality 'CT' is not one of ['CR', 'DX']"),
+        ({"ViewPosition": "LL"}, "view 'LL' is not one of ['AP', 'PA']"),
         ({"PatientSex": ""}, "unknown sex ''"),
         ({"PatientAge": "155"}, "age 155 is above 120"),
         ({"PatientAge": "old"}, "invalid age 'old'"),
         ({"PixelSpacing": [0.1, 0.2]}, "not square"),
     ],
 )
-def test_header_problems(make_dicom, noise, chest_tags, tags, problem):
+def test_header_problems(make_dicom, noise, chest_tags, header_checks, tags, problem):
     dataset = make_dicom(noise, **(chest_tags | tags))
 
-    assert [problem in found for found in header_problems(dataset, max_age=120)] == [True]
+    assert [problem in found for found in header_problems(dataset, header_checks)] == [True]
 
 
-def test_missing_pixel_spacing_is_a_problem(make_dicom, noise, chest_tags):
+def test_missing_pixel_spacing_is_a_problem(make_dicom, noise, chest_tags, header_checks):
     dataset = make_dicom(noise, **chest_tags)
     del dataset.PixelSpacing
 
-    assert header_problems(dataset, max_age=120) == ["pixel spacing None is missing or not square"]
+    assert header_problems(dataset, header_checks) == [
+        "pixel spacing None is missing or not square"
+    ]
 
 
 def test_varied_image_has_no_problems(noise):

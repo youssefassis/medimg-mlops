@@ -1,12 +1,11 @@
 """Checks a DICOM image before it enters the dataset."""
 
 import re
+from dataclasses import dataclass
 
 import numpy as np
 from pydicom import Dataset
 
-MODALITIES = {"CR", "DX"}  # computed and digital radiography
-VIEWS = {"AP", "PA"}
 SEXES = {"F", "M", "O"}
 NEAR_BLACK = 10  # pixel values below this count as black, on 0–255
 
@@ -28,13 +27,22 @@ def parse_age(value: str) -> int:
     return number // UNITS_PER_YEAR[unit]
 
 
-def header_problems(dataset: Dataset, max_age: int) -> list[str]:
+@dataclass(frozen=True)
+class HeaderChecks:
+    """What a header must contain, from config/ingestion.yaml."""
+
+    modalities: list[str]
+    views: list[str]
+    max_age: int
+
+
+def header_problems(dataset: Dataset, checks: HeaderChecks) -> list[str]:
     """Returns what is wrong with the header; empty if nothing."""
     problems = []
-    if (modality := dataset.get("Modality")) not in MODALITIES:
-        problems.append(f"modality {modality!r} is not a radiograph")
-    if (view := dataset.get("ViewPosition")) not in VIEWS:
-        problems.append(f"unknown view {view!r}")
+    if (modality := dataset.get("Modality")) not in checks.modalities:
+        problems.append(f"modality {modality!r} is not one of {checks.modalities}")
+    if (view := dataset.get("ViewPosition")) not in checks.views:
+        problems.append(f"view {view!r} is not one of {checks.views}")
     if (sex := dataset.get("PatientSex")) not in SEXES:
         problems.append(f"unknown sex {sex!r}")
     if (channels := dataset.get("SamplesPerPixel")) != 1:
@@ -45,8 +53,8 @@ def header_problems(dataset: Dataset, max_age: int) -> list[str]:
     except ValueError as error:
         problems.append(str(error))
     else:
-        if age > max_age:
-            problems.append(f"age {age} is above {max_age}")
+        if age > checks.max_age:
+            problems.append(f"age {age} is above {checks.max_age}")
 
     spacing = dataset.get("PixelSpacing")
     if spacing is None or len(spacing) != 2 or spacing[0] <= 0 or spacing[0] != spacing[1]:

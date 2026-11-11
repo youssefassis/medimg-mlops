@@ -4,7 +4,7 @@ import pytest
 import torch
 from PIL import Image
 
-from mlops.data.dataset import ChestXrayDataset
+from mlops.data.dataset import ImageDataset
 from mlops.data.samples import Sample
 from mlops.data.transforms import build_transform
 
@@ -27,7 +27,7 @@ def test_dataset_returns_image_and_label_index(tmp_path):
         Sample(Path("b.jpeg"), "PNEUMONIA", "p2"),
     ]
 
-    dataset = ChestXrayDataset(samples, tmp_path, build_transform())
+    dataset = ImageDataset(samples, tmp_path, build_transform())
 
     assert len(dataset) == 2
     assert [label for _, label in dataset] == [0, 1]

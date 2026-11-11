@@ -15,7 +15,8 @@ from torch.utils.data import DataLoader
 
 from mlops.config import TrainingConfig
 from mlops.data.batches import batch_paths, read_batches, split_off_patients
-from mlops.data.dataset import ChestXrayDataset
+from mlops.data.dataset import ImageDataset
+from mlops.data.dicom_checks import HeaderChecks
 from mlops.data.lineage import log_dataset
 from mlops.data.samples import LABELS, Sample
 from mlops.data.transforms import IMAGE_SIZE, build_transform
@@ -33,14 +34,14 @@ def train(
     config: TrainingConfig,
     data_dir: Path,
     target_sensitivity: float,
-    max_age: int,
+    header_checks: HeaderChecks,
     pretrained: bool = True,
 ) -> str:
     """Trains on batches 1 to `config.batch` and returns the MLflow run ID.
 
     Keeps the epoch with the best validation ROC AUC, then logs as `threshold` the highest
     decision threshold that reaches `target_sensitivity` on validation. The logged model serves
-    DICOM files, rejecting those that fail the ingestion header checks (`max_age` included).
+    DICOM files, rejecting those that fail `header_checks`, the ingestion header checks.
     Scoring on the test set is done separately, by `mlops.evaluation.evaluate.evaluate_run`.
     """
     torch.manual_seed(config.seed)
@@ -110,7 +111,7 @@ def train(
             "best epoch %d, val_roc_auc %.4f, threshold %.3f", best_epoch, best_auc, threshold
         )
 
-        log_model(model.cpu(), threshold, max_age)
+        log_model(model.cpu(), threshold, header_checks)
         return run.info.run_id
 
 
@@ -127,7 +128,7 @@ def pick_device(name: str) -> torch.device:
 def make_loader(
     samples: list[Sample], data_dir: Path, config: TrainingConfig, shuffle: bool = False
 ) -> DataLoader:
-    dataset = ChestXrayDataset(samples, data_dir, build_transform())
+    dataset = ImageDataset(samples, data_dir, build_transform())
     generator = torch.Generator().manual_seed(config.seed)
     return DataLoader(dataset, batch_size=config.batch_size, shuffle=shuffle, generator=generator)
 
@@ -161,7 +162,7 @@ def train_one_epoch(
     return total_loss / len(loader.dataset)
 
 
-def log_model(network: nn.Module, threshold: float, max_age: int) -> None:
+def log_model(network: nn.Module, threshold: float, header_checks: HeaderChecks) -> None:
     """Logs the servable model: the classifier in mlops/serving/classifier.py, with the network
     in MLflow's pt2 format as its artifact.
 
@@ -176,5 +177,9 @@ def log_model(network: nn.Module, threshold: float, max_age: int) -> None:
             name="model",
             python_model=str(CLASSIFIER_PATH),
             artifacts={"network": str(network_dir)},
-            model_config={"threshold": threshold, "max_age": max_age},
+            model_config={
+                "threshold": threshold,
+                "labels": list(LABELS),
+                "header_checks": asdict(header_checks),
+            },
         )
