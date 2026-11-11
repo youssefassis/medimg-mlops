@@ -14,7 +14,7 @@ CONTEXT_TAG = "mlflow.data.context"  # set by mlflow.log_input
 def digest(path: Path) -> str:
     """A short hash of the file's contents: it changes whenever any row changes.
 
-    Rows of the RSNA manifest include the source file hash, so the digest covers which images
+    Rows of the manifest include the source file hash, so the digest covers which images
     are used, their labels, and their split.
     """
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]

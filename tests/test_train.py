@@ -7,7 +7,7 @@ from PIL import Image
 
 from mlops.config import TrainingConfig
 from mlops.data.batches import heldout_path, write_batches, write_rows
-from mlops.data.rsna import ManifestRow
+from mlops.data.ingestion import ManifestRow
 from mlops.data.samples import Sample
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.training.train import class_weights, train

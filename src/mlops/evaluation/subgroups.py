@@ -3,7 +3,7 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from mlops.data.rsna import ManifestRow
+from mlops.data.ingestion import ManifestRow
 from mlops.evaluation.metrics import bootstrap_intervals, sensitivity_specificity
 
 # Names end up in MLflow metric names, which allow no "+" or "<".

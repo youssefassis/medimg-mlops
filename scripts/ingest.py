@@ -1,7 +1,8 @@
-"""Turns the raw RSNA DICOM files into de-identified PNGs and a manifest, in data/processed/rsna/.
+"""Turns the raw DICOM files of the source set in config/ingestion.yaml into de-identified PNGs
+and a manifest, in data/processed/.
 
 Needs DEID_SECRET, the key for patient pseudonyms (see .env.example):
-    uv run --env-file .env python scripts/ingest_rsna.py
+    uv run --env-file .env python scripts/ingest.py
 """
 
 import os
@@ -9,7 +10,8 @@ from collections import Counter
 from pathlib import Path
 
 from mlops.config import IngestionConfig, load_config
-from mlops.data.rsna import PROCESSED_DIR, ingest
+from mlops.data.ingestion import PROCESSED_DIR, ingest
+from mlops.data.sources import list_files
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,7 +23,8 @@ def main() -> None:
         raise SystemExit("Set DEID_SECRET in .env first (see .env.example)")
 
     data_dir = ROOT / config.data_dir
-    manifest, rejected = ingest(data_dir, config, secret)
+    files = list_files(config.source, data_dir)
+    manifest, rejected = ingest(files, data_dir, config, secret)
 
     labels = Counter(row.label for row in manifest)
     print(f"{len(manifest)} images in {(data_dir / PROCESSED_DIR).relative_to(ROOT)}/")

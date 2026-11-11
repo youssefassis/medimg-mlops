@@ -1,6 +1,6 @@
-"""Splits the ingested RSNA images into a held-out test set and patient-level batches.
+"""Splits the ingested images into a held-out test set and patient-level batches.
 
-Reads data/processed/rsna/manifest.csv (written by scripts/ingest_rsna.py) and writes the CSVs to
+Reads data/processed/manifest.csv (written by scripts/ingest.py) and writes the CSVs to
 data/batches/. Every split keeps the share of each label and view.
 """
 
@@ -15,8 +15,8 @@ from mlops.data.batches import (
     write_batches,
     write_rows,
 )
+from mlops.data.ingestion import ManifestRow, by_label_and_view, read_manifest
 from mlops.data.lineage import digest
-from mlops.data.rsna import ManifestRow, by_label_and_view, read_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 

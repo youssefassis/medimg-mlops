@@ -18,7 +18,8 @@ UNITS_PER_YEAR = {"D": 365, "W": 52, "M": 12, "Y": 1}
 def parse_age(value: str) -> int:
     """Returns the age in whole years.
 
-    Also accepts a bare number like "51", read as years: RSNA writes ages that way.
+    Also accepts a bare number like "51", read as years: some datasets, like RSNA, write ages
+    that way.
     """
     match = AGE_PATTERN.match(value.strip())
     if match is None:
