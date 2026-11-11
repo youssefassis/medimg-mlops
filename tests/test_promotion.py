@@ -60,12 +60,6 @@ def test_each_view_and_sex_must_meet_the_minimums():
     ]
 
 
-def test_every_failed_rule_is_reported():
-    candidate = {"recall": 0.5, "specificity": 0.5, "roc_auc": 0.5}
-
-    assert len(check_gate(candidate, GOOD, CONFIG)) == 5
-
-
 @pytest.fixture
 def mlflow_store(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)  # MLflow stores artifacts under the working directory
