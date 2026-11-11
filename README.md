@@ -44,7 +44,9 @@ X-rays, with Airflow and MLflow running locally.
    intervals, and per view, sex, age group and pixel spacing (the table is in the run's
    `validation/subgroups.json`). The model is then registered as `pneumonia-classifier`, and
    gets the `production` alias if it passes the gate in `config/promotion.yaml`, overall and
-   for each view and sex.
+   for each view and sex. The decision is recorded in the run's `report.json` (data used,
+   metrics, gate, production model compared with, reasons), and summarized on the model
+   version's page in MLflow (Models → `pneumonia-classifier`).
    On CPU this takes several minutes per batch.
 
    To run the same steps outside Airflow, on the batches up to `batch` in
