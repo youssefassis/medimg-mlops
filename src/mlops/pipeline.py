@@ -16,6 +16,7 @@ from mlops.data.validation import validate_batch
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.registry.promotion import promote as promote_model
 from mlops.reporting.report import log_report
+from mlops.training.train import pick_device
 from mlops.training.train import train as train_model
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +46,9 @@ def train(batch: int) -> str:
 def evaluate(run_id: str) -> dict[str, float]:
     _setup_logging()
     config = _training_config()
-    return evaluate_run(run_id, ROOT / config.data_dir, config.batch_size)
+    return evaluate_run(
+        run_id, ROOT / config.data_dir, pick_device(config.device), config.batch_size
+    )
 
 
 def promote(run_id: str) -> bool:

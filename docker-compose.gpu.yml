@@ -1,0 +1,13 @@
+# Gives the NVIDIA GPU to the Airflow scheduler, which runs the training tasks.
+# Needs the NVIDIA Container Toolkit. Start the stack with:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+
+services:
+  airflow-scheduler:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

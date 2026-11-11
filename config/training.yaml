@@ -6,5 +6,5 @@ epochs: 5
 batch_size: 32
 learning_rate: 0.0001
 seed: 42
-device: auto # cuda or mps when available, else cpu
+device: cuda # a PyTorch device
 experiment: pneumonia
