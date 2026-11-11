@@ -1,14 +1,14 @@
 """The training pipeline: one function per step, called by the Airflow DAG and scripts/train.py.
 
-Settings come from config/training.yaml and config/promotion.yaml; only the batch number changes
-between runs.
+Settings come from config/training.yaml, config/promotion.yaml and config/ingestion.yaml; only
+the batch number changes between runs.
 """
 
 import logging
 from dataclasses import replace
 from pathlib import Path
 
-from mlops.config import PromotionConfig, TrainingConfig, load_config
+from mlops.config import IngestionConfig, PromotionConfig, TrainingConfig, load_config
 from mlops.data.batches import batch_path, heldout_path, read_batch
 from mlops.data.validation import validate_batch
 from mlops.evaluation.evaluate import evaluate_run
@@ -35,7 +35,8 @@ def train(batch: int) -> str:
     _setup_logging()
     config = _training_config(batch)
     target_sensitivity = _promotion_config().min_recall
-    return train_model(config, ROOT / config.data_dir, target_sensitivity)
+    max_age = load_config(ROOT / "config" / "ingestion.yaml", IngestionConfig).max_age
+    return train_model(config, ROOT / config.data_dir, target_sensitivity, max_age)
 
 
 def evaluate(run_id: str) -> dict[str, float]:
