@@ -1,7 +1,8 @@
 """The training pipeline: one function per step, called by the Airflow DAG and scripts/train.py.
 
 Settings come from config/training.yaml, config/promotion.yaml and config/ingestion.yaml; only
-the batch number changes between runs.
+the batch number changes between runs. Each run uses batches 1 to that number: all the data
+released so far.
 """
 
 import logging
@@ -9,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from mlops.config import IngestionConfig, PromotionConfig, TrainingConfig, load_config
-from mlops.data.batches import batch_path, heldout_path, read_batch
+from mlops.data.batches import heldout_path, read_batch, read_batches
 from mlops.data.validation import validate_batch
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.registry.promotion import promote as promote_model
@@ -24,10 +25,10 @@ def validate(batch: int) -> None:
     _setup_logging()
     config = _training_config(batch)
     data_dir = ROOT / config.data_dir
-    samples = read_batch(batch_path(data_dir, batch))
+    samples = read_batches(data_dir, batch)
     test_patients = {sample.patient_id for sample in read_batch(heldout_path(data_dir))}
     validate_batch(samples, data_dir, test_patients)
-    logger.info("batch %d is valid: %d images", batch, len(samples))
+    logger.info("batches 1 to %d are valid: %d images", batch, len(samples))
 
 
 def train(batch: int) -> str:

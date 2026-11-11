@@ -1,4 +1,4 @@
-"""Fine-tunes the classifier on one batch and tracks the run in MLflow."""
+"""Fine-tunes the classifier on the batches released so far and tracks the run in MLflow."""
 
 import copy
 import logging
@@ -14,7 +14,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from mlops.config import TrainingConfig
-from mlops.data.batches import batch_path, read_batch, split_off_patients
+from mlops.data.batches import batch_paths, read_batches, split_off_patients
 from mlops.data.chest_xray import LABELS, Sample
 from mlops.data.dataset import ChestXrayDataset
 from mlops.data.lineage import log_dataset
@@ -36,7 +36,7 @@ def train(
     max_age: int,
     pretrained: bool = True,
 ) -> str:
-    """Trains on batch number `config.batch` and returns the MLflow run ID.
+    """Trains on batches 1 to `config.batch` and returns the MLflow run ID.
 
     Keeps the epoch with the best validation ROC AUC, then logs as `threshold` the highest
     decision threshold that reaches `target_sensitivity` on validation. The logged model serves
@@ -45,7 +45,7 @@ def train(
     """
     torch.manual_seed(config.seed)
     device = pick_device(config.device)
-    samples = read_batch(batch_path(data_dir, config.batch))
+    samples = read_batches(data_dir, config.batch)
     train_samples, val_samples = split_off_patients(samples, config.val_fraction, config.seed)
 
     train_loader = make_loader(train_samples, data_dir, config, shuffle=True)
@@ -72,7 +72,8 @@ def train(
                 **weight_params,
             }
         )
-        log_dataset(batch_path(data_dir, config.batch), context="training")
+        for path in batch_paths(data_dir, config.batch):
+            log_dataset(path, context="training")
 
         best_auc, best_epoch, best_state = -1.0, 0, None
         for epoch in range(1, config.epochs + 1):

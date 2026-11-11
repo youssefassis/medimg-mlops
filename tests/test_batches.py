@@ -7,6 +7,7 @@ import pytest
 from mlops.data.batches import (
     heldout_path,
     read_batch,
+    read_batches,
     split_by_patient,
     split_off_patients,
     write_batches,
@@ -126,6 +127,13 @@ def test_read_batch_reads_what_write_batches_wrote(tmp_path):
     paths = write_batches(batches, tmp_path)
 
     assert [read_batch(path) for path in paths] == batches
+
+
+def test_read_batches_reads_every_batch_up_to_the_last(tmp_path):
+    batches = split_by_patient(SAMPLES, n_batches=3, seed=0)
+    write_batches(batches, tmp_path / "batches")
+
+    assert read_batches(tmp_path, last=2) == batches[0] + batches[1]
 
 
 VIEW_ROWS = [
