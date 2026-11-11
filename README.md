@@ -12,6 +12,7 @@ DICOM files → checked and de-identified → batches → training → quality g
 
 - [uv](https://docs.astral.sh/uv/)
 - Docker, with at least 4 GB of RAM
+- An NVIDIA GPU with the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/), for training
 
 ## Getting started
 
@@ -27,12 +28,12 @@ DICOM files → checked and de-identified → batches → training → quality g
 3. Download the data: see [data/README.md](data/README.md).
 4. Prepare the data (about 3 minutes):
    ```bash
-   uv run --env-file .env python scripts/ingest_rsna.py
+   uv run --env-file .env python scripts/ingest.py
    uv run python scripts/make_batches.py
    ```
 5. Start everything:
    ```bash
-   docker compose up -d --build
+   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
    ```
 6. Train: in Airflow, turn on `release_batch` and `training_pipeline`, then trigger
    `release_batch` with batch 1. Release batches 2 to 5 to simulate new data arriving: each
@@ -65,7 +66,7 @@ Stop everything with `docker compose down`.
 ## Project structure
 
 ```
-config/    settings for ingestion, batches, training and promotion
+config/    settings: the classes to predict, ingestion, batches, training and promotion
 dags/      Airflow DAGs
 data/      the dataset and batches (not in git)
 docker/    Dockerfiles and database setup

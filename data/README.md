@@ -18,7 +18,7 @@ raw/rsna/
 
 ## What the scripts create
 
-- `scripts/ingest_rsna.py` → `processed/rsna/`: the images that pass the checks, de-identified
+- `scripts/ingest.py` → `processed/`: the images that pass the checks, de-identified
   and saved as PNGs, with `manifest.csv` listing them and `rejected.csv` listing the others with
   the reasons.
 - `scripts/make_batches.py` → `batches/`: `test.csv`, a held-out test set used to score every
