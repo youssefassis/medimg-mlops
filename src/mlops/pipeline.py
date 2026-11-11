@@ -14,6 +14,7 @@ from mlops.data.batches import heldout_path, read_batch, read_batches
 from mlops.data.validation import validate_batch
 from mlops.evaluation.evaluate import evaluate_run
 from mlops.registry.promotion import promote as promote_model
+from mlops.reporting.report import log_report
 from mlops.training.train import train as train_model
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,9 +48,16 @@ def evaluate(run_id: str) -> dict[str, float]:
 
 
 def promote(run_id: str) -> bool:
-    """Returns whether the model went to production. A rejection is not an error."""
+    """Returns whether the model went to production. A rejection is not an error.
+
+    Records the decision in the run and on the model version, as soon as it is made: later,
+    production may have changed.
+    """
     _setup_logging()
-    return promote_model(run_id, _promotion_config())
+    config = _promotion_config()
+    decision = promote_model(run_id, config)
+    log_report(run_id, decision, config)
+    return decision.promoted
 
 
 def _setup_logging() -> None:
