@@ -5,6 +5,7 @@ Notable changes, one entry per step. The format follows [Keep a Changelog](https
 ## [Unreleased]
 
 ### Added
+- Promotion report: each run's decision as `report.json`, summarized on its model version in MLflow (#17)
 - Retrain on every batch released so far, each time a batch is released (#16)
 - Prediction API with `mlflow models serve`: send DICOM files, get predictions from the production model (#15)
 - Clinical validation: decision threshold chosen on validation, 95% confidence intervals, metrics per subgroup, and a gate on each view and sex (#28)
