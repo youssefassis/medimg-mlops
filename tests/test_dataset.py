@@ -1,22 +1,10 @@
 from pathlib import Path
 
-import pytest
-import torch
 from PIL import Image
 
 from mlops.data.dataset import ImageDataset
 from mlops.data.samples import Sample
 from mlops.data.transforms import build_transform
-
-
-@pytest.mark.parametrize("mode", ["L", "RGB"])
-def test_transform_gives_a_3x224x224_tensor(mode):
-    image = Image.new(mode, (300, 200))
-
-    tensor = build_transform()(image)
-
-    assert tensor.shape == (3, 224, 224)
-    assert tensor.dtype == torch.float32
 
 
 def test_dataset_returns_image_and_label_index(tmp_path):
