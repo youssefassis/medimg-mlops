@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import mlflow
 import numpy as np
 import pytest
@@ -5,6 +7,7 @@ from mlflow import MlflowClient
 from torch import nn
 
 from mlops.config import PromotionConfig
+from mlops.data.lineage import log_dataset
 from mlops.registry.promotion import check_gate, promote
 
 CONFIG = PromotionConfig(
@@ -69,12 +72,16 @@ def mlflow_store(tmp_path, monkeypatch):
     monkeypatch.setenv("MLFLOW_TRACKING_URI", f"sqlite:///{tmp_path}/mlflow.db")
 
 
-def log_run(metrics: dict[str, float]) -> str:
-    """Logs a tiny model with test metrics, like the train and evaluate steps do."""
+def log_run(metrics: dict[str, float], test_set: str = "a.png,NORMAL\n") -> str:
+    """Logs a tiny model with test metrics and the test set's rows, like the train and evaluate
+    steps do."""
+    path = Path("test.csv")  # in the store's directory
+    path.write_text("path,label\n" + test_set)
     with mlflow.start_run() as run:
         mlflow.pytorch.log_model(
             nn.Linear(2, 2), name="model", input_example=np.zeros((2, 2), dtype=np.float32)
         )
+        log_dataset(path, context="testing")
         mlflow.log_metrics({f"test_{name}": value for name, value in metrics.items()})
     return run.info.run_id
 
@@ -113,6 +120,19 @@ def test_worse_model_is_registered_but_not_promoted(mlflow_store):
         "promotion": "rejected",
         "reason": "roc_auc 0.900 < production 0.950 - 0.01",
     }
+
+
+def test_production_scored_on_another_test_set_is_not_compared(mlflow_store):
+    promote(log_run(GOOD, test_set="old.png,NORMAL\n"), CONFIG)
+    worse_run = log_run(GOOD | {"roc_auc": 0.90})
+
+    decision = promote(worse_run, CONFIG)
+
+    assert decision.promoted is True
+    assert (decision.production_version, decision.production_metrics) == ("1", None)
+    assert version_tags(worse_run)["reason"] == (
+        "passes the minimums; production was scored on another test set"
+    )
 
 
 def test_retrying_registers_the_run_once(mlflow_store):

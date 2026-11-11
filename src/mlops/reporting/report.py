@@ -7,6 +7,7 @@ import mlflow
 from mlflow import MlflowClient
 
 from mlops.config import PromotionConfig
+from mlops.data.lineage import run_datasets
 from mlops.registry.promotion import COMPARED_METRICS, Decision
 
 SCHEMA_VERSION = 1  # bump when a field changes meaning or disappears
@@ -21,14 +22,7 @@ def build_report(run_id: str, decision: Decision, config: PromotionConfig) -> di
         "schema_version": SCHEMA_VERSION,
         "run_id": run_id,
         "model": {"name": config.model_name, "version": decision.version},
-        "datasets": [
-            {
-                "context": dataset_input.tags[0].value,
-                "name": dataset_input.dataset.name,
-                "digest": dataset_input.dataset.digest,
-            }
-            for dataset_input in run.inputs.dataset_inputs
-        ],
+        "datasets": run_datasets(run),
         "images": {split: int(run.data.params[f"n_{split}"]) for split in ("train", "val", "test")},
         "threshold": float(run.data.params["threshold"]),
         "gate": asdict(config),
@@ -36,7 +30,11 @@ def build_report(run_id: str, decision: Decision, config: PromotionConfig) -> di
         "metrics": decision.metrics,
         "production": None
         if decision.production_version is None
-        else {"version": decision.production_version, "metrics": decision.production_metrics},
+        else {
+            "version": decision.production_version,
+            "compared": decision.production_metrics is not None,
+            "metrics": decision.production_metrics,
+        },
     }
 
 
@@ -48,17 +46,20 @@ def render_summary(report: dict) -> str:
     metrics, production = report["metrics"], report["production"]
     header = "none in production" if production is None else f"v{production['version']}"
     lines += [f"| Metric | This model [95% CI] | Production ({header}) |", "|---|---|---|"]
+    compared = production is not None and production["compared"]
     for name in COMPARED_METRICS:
         low, high = metrics[f"{name}_ci_low"], metrics[f"{name}_ci_high"]
-        current = "–" if production is None else f"{production['metrics'][name]:.3f}"
+        current = f"{production['metrics'][name]:.3f}" if compared else "–"
         lines.append(f"| {name} | {metrics[name]:.3f} [{low:.3f}–{high:.3f}] | {current} |")
 
     trained_on = ", ".join(d["name"] for d in report["datasets"] if d["context"] == "training")
-    lines += [
-        "",
+    lines.append("")
+    if production is not None and not compared:
+        lines.append("Not compared with production: it was scored on another test set.")
+    lines.append(
         f"Trained on {trained_on}, threshold {report['threshold']:.3f}."
-        f" Full record: `{REPORT_PATH}` in run `{report['run_id']}`.",
-    ]
+        f" Full record: `{REPORT_PATH}` in run `{report['run_id']}`."
+    )
     return "\n".join(lines)
 
 

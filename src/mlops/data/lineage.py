@@ -6,6 +6,9 @@ from pathlib import Path
 import mlflow
 from mlflow.data.dataset_source_registry import resolve_dataset_source
 from mlflow.data.meta_dataset import MetaDataset
+from mlflow.entities import Run
+
+CONTEXT_TAG = "mlflow.data.context"  # set by mlflow.log_input
 
 
 def digest(path: Path) -> str:
@@ -28,3 +31,23 @@ def log_dataset(path: Path, context: str) -> str:
     )
     mlflow.log_input(dataset, context=context)
     return dataset_digest
+
+
+def run_datasets(run: Run) -> list[dict[str, str]]:
+    """The datasets logged with the run: how it used each one, its name and its digest."""
+    datasets = []
+    for dataset_input in run.inputs.dataset_inputs:
+        tags = {tag.key: tag.value for tag in dataset_input.tags}
+        datasets.append(
+            {
+                "context": tags.get(CONTEXT_TAG),
+                "name": dataset_input.dataset.name,
+                "digest": dataset_input.dataset.digest,
+            }
+        )
+    return datasets
+
+
+def heldout_digest(run: Run) -> str | None:
+    """The digest of the test set the run was scored on; None if it logged none."""
+    return next((d["digest"] for d in run_datasets(run) if d["context"] == "testing"), None)

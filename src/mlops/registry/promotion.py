@@ -8,6 +8,7 @@ from mlflow import MlflowClient
 from mlflow.entities.model_registry import ModelVersion
 
 from mlops.config import PromotionConfig
+from mlops.data.lineage import heldout_digest
 from mlops.evaluation.subgroups import GATED_SUBGROUPS
 
 PRODUCTION_ALIAS = "production"
@@ -27,6 +28,7 @@ class Decision:
     reasons: list[str]  # why it was rejected; empty if promoted
     metrics: dict[str, float]
     production_version: str | None  # the production model at decision time, if any
+    # None when it wasn't compared: no production model, or one scored on another test set.
     production_metrics: dict[str, float] | None
 
 
@@ -75,15 +77,15 @@ def _subgroup_reasons(candidate: dict[str, float], config: PromotionConfig) -> l
 def promote(run_id: str, config: PromotionConfig) -> Decision:
     """Registers the run's model and gives it the production alias if it passes the gate.
 
-    Either way, the model version gets a `promotion` tag (passed or rejected) and a `reason`
-    tag. Safe to retry: a run is registered only once.
+    The candidate is compared with production only if both were scored on the same test set:
+    scores on different test sets aren't comparable. Either way, the model version gets a
+    `promotion` tag (passed or rejected) and a `reason` tag. Safe to retry: a run is
+    registered only once.
     """
     client = MlflowClient()
     candidate = _test_metrics(client, run_id)
     production_version = _production_version(client, config.model_name)
-    production = (
-        None if production_version is None else _test_metrics(client, production_version.run_id)
-    )
+    production = _comparable_metrics(client, run_id, production_version)
     version = _register(client, run_id, config.model_name)
     reasons = check_gate(candidate, production, config)
     decision = Decision(
@@ -103,7 +105,7 @@ def promote(run_id: str, config: PromotionConfig) -> Decision:
 
     client.set_registered_model_alias(config.model_name, PRODUCTION_ALIAS, version)
     client.set_model_version_tag(config.model_name, version, "promotion", "passed")
-    client.set_model_version_tag(config.model_name, version, "reason", _pass_reason(production))
+    client.set_model_version_tag(config.model_name, version, "reason", _pass_reason(decision))
     logger.info("%s version %s is now in production", config.model_name, version)
     return decision
 
@@ -128,6 +130,19 @@ def _production_version(client: MlflowClient, model_name: str) -> ModelVersion |
     return client.get_model_version_by_alias(model_name, PRODUCTION_ALIAS)
 
 
+def _comparable_metrics(
+    client: MlflowClient, run_id: str, production_version: ModelVersion | None
+) -> dict[str, float] | None:
+    """Production's test metrics, if it was scored on the same test set as the candidate."""
+    if production_version is None:
+        return None
+    test_set = heldout_digest(client.get_run(run_id))
+    if test_set is None or test_set != heldout_digest(client.get_run(production_version.run_id)):
+        logger.info("production was scored on another test set: not compared")
+        return None
+    return _test_metrics(client, production_version.run_id)
+
+
 def _register(client: MlflowClient, run_id: str, model_name: str) -> str:
     existing = client.search_model_versions(f"name = '{model_name}' and run_id = '{run_id}'")
     if existing:
@@ -135,7 +150,9 @@ def _register(client: MlflowClient, run_id: str, model_name: str) -> str:
     return mlflow.register_model(f"runs:/{run_id}/model", model_name).version
 
 
-def _pass_reason(production: dict[str, float] | None) -> str:
-    if production is None:
+def _pass_reason(decision: Decision) -> str:
+    if decision.production_version is None:
         return "first model to pass the minimums"
+    if decision.production_metrics is None:
+        return "passes the minimums; production was scored on another test set"
     return "passes the minimums and matches production"
